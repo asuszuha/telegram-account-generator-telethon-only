@@ -1,8 +1,17 @@
 from telethon import TelegramClient
-from telethon.tl.functions.account import UpdateUsernameRequest
+from telethon.errors import PhoneNumberBannedError
+from telethon.tl.functions.account import UpdateProfileRequest, UpdateUsernameRequest
 from telethon.tl.functions.photos import UploadProfilePhotoRequest
 
 from src.utils.logger import logger
+
+
+class TelethonException(Exception):
+    pass
+
+
+class NumberBannedException(Exception):
+    pass
 
 
 class TelethonWrapper:
@@ -16,6 +25,7 @@ class TelethonWrapper:
         username: str,
         profile_image_path: str = None,
         password: str = None,
+        about: str = None,
     ):
         self.client_internal = client
         self.phone = phone
@@ -25,22 +35,33 @@ class TelethonWrapper:
         self.password = password
         self.username = username
         self.profile_image_path = profile_image_path
+        self.about = about
 
     async def register_account(self):
-        logger.info("Starting to sign in account with telethon.")
-        self.client_internal = await self.client_internal.start(
-            phone=self.phone,
-            max_attempts=10,
-            code_callback=self.code_callback,
-            password=self.password_callback,
-        )
+        logger.info("Starting to register in account with telethon.")
+        try:
+            self.client_internal = await self.client_internal.start(
+                first_name=self.first_name,
+                last_name=self.last_name,
+                phone=self.phone,
+                max_attempts=10,
+                code_callback=self.code_callback,
+                password=self.password_callback,
+            )
+        except PhoneNumberBannedError as pbe:
+            logger.info(str(pbe))
+            raise NumberBannedException(str(pbe))
+        except Exception as e:
+            logger.info(f"Unknown error occured: {str(e)}")
 
+    async def set_other_user_settings(self):
         if self.profile_image_path:
             logger.info("Profile image will be added.")
             await self.client_internal(
                 UploadProfilePhotoRequest(await self.client_internal.upload_file(self.profile_image_path))
             )
             logger.info("Profile image successfully added.")
+
         try:
             logger.info(f"Trying to update username to {self.username}.")
             await self.client_internal(UpdateUsernameRequest(self.username))
@@ -54,6 +75,13 @@ class TelethonWrapper:
                 logger.info(f"2fa password is set to {self.password}")
         except Exception as e:
             logger.error(f"Cannot change set 2fa password: {str(e)}")
+
+        try:
+            if self.about:
+                await self.client(UpdateProfileRequest(about=self.about))
+                logger.info(f"About set to {self.about}")
+        except Exception as e:
+            logger.error(f"Cannot set about: {str(e)}")
 
     @property
     def client(self) -> TelegramClient:

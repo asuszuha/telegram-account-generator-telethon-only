@@ -1,4 +1,5 @@
 import logging
+import os
 import platform
 import threading
 import tkinter as tk
@@ -11,12 +12,13 @@ from src.utils.logger import ConsoleUi, logger
 
 class TelegramAccountCreator(tk.Tk):
     def __init__(self, *args, **kwargs):
+        self.initial_checks()
         tk.Tk.__init__(self, *args, **kwargs)
         logging.basicConfig(level=logging.INFO)
         self.rowconfigure([1, 2], weight=1)  # type: ignore
         self.columnconfigure(0, weight=1, uniform="fred")
         self.resizable(False, False)
-        self.geometry("800x550")
+        self.geometry("700x450")
         self._current_running_tab = None
         style_cbox = ttk.Style()
         style_cbox.map("BW.TCombobox", fieldbackground=[("readonly", "white")])
@@ -30,7 +32,7 @@ class TelegramAccountCreator(tk.Tk):
             print("Not recognized platform. No icon will be set.")
             raise Exception("Not recognized platform.")
 
-        self.title("Telegram Auto Account")
+        self.title("Telegram Auto Account v0.3.0_beta (telethon only)")
         self.header = Header(parent=self)
         self.header.grid(row=0, column=0, sticky="w")
 
@@ -44,6 +46,35 @@ class TelegramAccountCreator(tk.Tk):
         console = ConsoleUi(self)
         console.grid(row=2, column=0, sticky="nsew")
         logger.info("App starting")
+
+    def initial_checks(self):
+        if not os.path.exists("data"):
+            os.mkdir("data")
+
+        if not os.path.exists("profile_pics"):
+            os.mkdir("profile_pics")
+
+        if not os.path.exists(r"data\names.txt"):
+            with open(r"data\names.txt", "a") as fh:
+                fh.close()
+
+        if not os.path.exists(r"data\devices.txt"):
+            with open(r"data\devices.txt", "a") as fh:
+                fh.close()
+
+        if not os.path.exists(r"data\about.txt"):
+            with open(r"data\about.txt", "a") as fh:
+                fh.close()
+
+        if not os.path.exists(r"data\passwords.txt"):
+            with open(r"data\passwords.txt", "a") as fh:
+                fh.close()
+
+        if not os.path.exists("output"):
+            os.mkdir("output")
+
+        if not os.path.exists("sessions"):
+            os.mkdir("sessions")
 
     def run(self):
 

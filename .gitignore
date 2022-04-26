@@ -132,3 +132,5 @@ appconfig.json
 /chrome_settings
 test_telethon.py
 sessions/
+data/
+output/

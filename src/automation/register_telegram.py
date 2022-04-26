@@ -1,26 +1,18 @@
 import asyncio
 import os
+import platform
 import time
 import tkinter.messagebox as tkmb
-from typing import List, Optional, Union
+from typing import List, Union
 
-from appium import webdriver
-from appium.webdriver.appium_service import AppiumService
-from appium.webdriver.common.appiumby import AppiumBy
-from retry import retry
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
 from telethon import TelegramClient
 
 from src.automation.abstract_automation import AbstractAutomation
-from src.utils.adb_helper import ADBHelper
 from src.utils.logger import logger
 from src.utils.sim5_net import NoFreePhoneException, PurchaseNotPossibleException, Sim5Net
 from src.utils.sms_activate import NoNumbersException, SmsActivate
 
-from .socks_droid import SocksDroid
-from .telethon_wrapper import TelethonWrapper
+from .telethon_wrapper import NumberBannedException, TelethonWrapper
 
 
 class RegisterTelegramException(Exception):
@@ -34,115 +26,62 @@ class CannotRetrieveSMSCode(RegisterTelegramException):
 class RegisterTelegram(AbstractAutomation):
     def __init__(
         self,
-        device_name: str,
         sms_operator: Union[Sim5Net, SmsActivate],
+        sms_timeout: str,
         country: str,
-        names: List[str],
-        filename: str,
-        profile_pics_paths: Optional[str],
-        output_dir: str,
         tg_api_id: str,
         tg_api_hash: str,
-        proxy_list: Optional[List[str]],
-        proxy_filename: Optional[str],
-        password_list: Optional[List[str]],
-        password_filename: Optional[str],
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self._port = 4723
-        self._appium_service = AppiumService()
-        self._appium_service.start(args=[f"-p {str(self._port)}"])
-        self.device_name = device_name
-        self._package_name = "org.telegram.messenger"
-        self._caps = {}
-        self._caps["platformName"] = "Android"
-        self._caps["appium:ensureWebviewsHavePages"] = True
-        self._caps["appium:nativeWebScreenshot"] = True
-        self._caps["appium:newCommandTimeout"] = 10000
-        self._caps["appium:autoGrantPermissions	"] = True
-        self._caps["appium:connectHardwareKeyboard"] = True
-        self._caps["appium:appPackage"] = self._package_name
-        self._caps["appium:appActivity"] = "org.telegram.ui.LaunchActivity"
-        self._emulator = False
-        if self.is_emulator(device_name):
-            self._emulator = True
-            emulator_name = ADBHelper().get_emulator_name(device_name)
-            self._caps["appium:avd"] = emulator_name
-        else:
-            self._caps["appium:udid"] = device_name
 
         self.sms_operator = sms_operator
         self.country = country
-        self.names = names
-        self.filename = filename
-        self.profile_pics_path = profile_pics_paths
-        if profile_pics_paths:
-            self._list_of_profile_pics_path = os.listdir(profile_pics_paths)
-        else:
-            self._list_of_profile_pics_path = None
-        self.first_run = True
-        self._driver = None
-        self.output_dir = output_dir
+
+        # Init from files
+        self.names = self.read_file_with_property("names")
+        self.devices = self.read_file_with_property("devices")
+        self.proxies = self.read_file_with_property("proxies")
+        self.abouts = self.read_file_with_property("about")
+        self.passwords = self.read_file_with_property("passwords")
+        self.output_dir = "output"
+        self.profile_pics_path = "profile_pics"
+        self._list_of_profile_pics_path = os.listdir(self.profile_pics_path)
+
         self.tg_api_id = tg_api_id
         self.tg_api_hash = tg_api_hash
-        self.proxy_list = proxy_list
-        self.proxy_filename = proxy_filename
-        self.password_list = password_list
-        self.password_filename = password_filename
 
-    def is_emulator(self, device_name: str):
-        return "emulator" in device_name.lower()
+        self.sms_timeout = int(sms_timeout)
 
-    def install_socksdroid(self, driver):
-        if not driver.is_app_installed("net.typeblog.socks"):
-            driver.install_app(r"apks\net_typeblog_socks.apk")
-
-    @retry(Exception, 3, 5)
-    def start_messaging_screen(self, driver):
-        if self._emulator:
-            wait_time = 100
+    def read_file_with_property(self, filename: str):
+        if os.path.exists(f"data\\{filename}.txt"):
+            with open(f"data\\{filename}.txt", "r") as fh:
+                return [line.replace("\\n", "") for line in fh.readlines()]
         else:
-            wait_time = 30
+            logger.exception(f"Please put {filename} file under data folder.")
+            raise Exception("No names file detected!")
 
-        start_messaging_elem = WebDriverWait(driver, wait_time).until(
-            expected_conditions.presence_of_element_located(
-                (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().textContains("Start Messaging")')
-            )
-        )
+    def write_list_to_file(self, filename: str, new_list: List[str]):
+        new_list = [elem + "\n" for elem in new_list]
+        with open(f"data\\{filename}.txt", "w") as fh:
+            fh.writelines(new_list)
 
-        start_messaging_elem.click()
-        time.sleep(4)
-
-    def allow_phone_calls(self, driver):
-        try:
-            pop_up_allow_calls = driver.find_element_by_android_uiautomator('new UiSelector().textContains("CONTINUE")')
-            pop_up_allow_calls.click()
-            time.sleep(5)
-            allow_calls = driver.find_element(AppiumBy.XPATH, "//android.widget.Button[@text='Allow']")
-            allow_calls.click()
-        except Exception:
-            pass
-
-        time.sleep(4)
-
-    def fill_country_code_and_phone_number(self, driver):
-        country = driver.find_element(by=AppiumBy.ACCESSIBILITY_ID, value="Country code")
-        country.clear()
-        phone_number = driver.find_element(by=AppiumBy.ACCESSIBILITY_ID, value="Phone number")
-        phone_number.clear()
+    def get_number(self):
+        logger.info(f"Getting number from country: {self.country}")
         if isinstance(self.sms_operator, SmsActivate):
             try:
                 self._number = self.sms_operator.get_number(country=self.country)
                 self._phone_number = "+" + str(self._number["phone"])
+                self._activation_id = self._number["activation_id"]
+                self.sms_operator.set_status(self._activation_id, 1)
             except NoNumbersException as e:
                 logger.info(f"No numbers found: {str(e)}.")
                 raise e
-            country.send_keys(self._number["phone"])
         elif isinstance(self.sms_operator, Sim5Net):
             try:
                 self._number = self.sms_operator.purchase_number(country=self.country)
                 self._phone_number = str(self._number.phone)
+                self._activation_id = self._number.id
             except PurchaseNotPossibleException as e:
                 logger.info(f"No numbers found: {str(e)}.")
                 raise e
@@ -150,215 +89,40 @@ class RegisterTelegram(AbstractAutomation):
                 logger.info(f"No numbers found: {str(e)}.")
                 raise e
 
-            country.send_keys(self._number.phone)
-        complete_phone_no = driver.find_element(by=AppiumBy.ACCESSIBILITY_ID, value="Done")
-        complete_phone_no.click()
-        time.sleep(3)
-        try:
-            pop_up = driver.find_element_by_android_uiautomator('new UiSelector().textContains("Yes")')
-            pop_up.click()
-        except Exception:
-            logger.info("No popup appeared for approving number.")
+        logger.info(f"Phone number:  {self._phone_number} | activation id: {self._activation_id}")
 
-        time.sleep(5)
-
-    def allow_read_call_log(self, driver):
-        try:
-            pop_up_allow_read_call_log = driver.find_element_by_android_uiautomator(
-                'new UiSelector().textContains("CONTINUE")'
-            )
-            pop_up_allow_read_call_log.click()
-            time.sleep(5)
-            allow_call_logs = driver.find_element(AppiumBy.XPATH, "//android.widget.Button[@text='Allow']")
-            allow_call_logs.click()
-        except Exception:
-            pass
-
-        time.sleep(4)
-
-    def get_verification_code(self):
-        verification_message_overview = WebDriverWait(self._driver, 10).until(
-            expected_conditions.visibility_of_element_located(
-                (
-                    AppiumBy.XPATH,
-                    (
-                        "//android.widget.FrameLayout[2]"
-                        "//androidx.recyclerview.widget.RecyclerView//android.view.ViewGroup"
-                    ),
-                )
-            )
-        )
-
-        verification_message_overview.click()
-        time.sleep(3)
-        verification_message_all = WebDriverWait(self._driver, 10).until(
-            expected_conditions.visibility_of_element_located(
-                (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().textContains("Login code")')
-            )
-        )
-        code = verification_message_all.text.split(":")[1].split(".")[0].strip()
-        return code
-
-    def fill_sms_code(self, driver):
-        wait_for_code_screen = WebDriverWait(driver, 40).until(  # noqa
-            expected_conditions.presence_of_element_located(
-                (
-                    By.XPATH,
-                    (
-                        "//android.widget.FrameLayout//android.widget.LinearLayout"
-                        "//android.widget.TextView[@text='Enter code']"
-                    ),
-                )
-            )
-        )
-
-        sms_code_elem = WebDriverWait(driver, 30).until(
-            expected_conditions.presence_of_element_located((By.XPATH, "//android.widget.EditText[@index=0]"))
-        )
-
-        retry_count = 0
+    def wait_sms_code(self):
+        max_retry_count = int(self.sms_timeout / 5)
+        logger.info(f"Maximum time out time is set to {str(self.sms_timeout)}.")
         # TODO: If not received throw error
-        while retry_count < 10:
+        status = None
+        while max_retry_count > 0:
             if isinstance(self.sms_operator, SmsActivate):
                 try:
                     status = self.sms_operator.get_status(self._number["activation_id"])  # type: ignore
-                    sms_code_elem = WebDriverWait(driver, 30).until(
-                        expected_conditions.presence_of_element_located(
-                            (By.XPATH, "//android.widget.EditText[@index=0]")
-                        )
-                    )
-                    sms_code_elem.click()
-                    sms_code_elem.send_keys(status)
                     break
                 except Exception:
-                    logger.info(f"Cannot get status code. Retry number {retry_count + 1}.")
+                    logger.info("Waiting for code ...")
 
             elif isinstance(self.sms_operator, Sim5Net):
                 try:
                     status = self.sms_operator.get_status_code(self._number.id)
-                    sms_code_elem = WebDriverWait(driver, 30).until(
-                        expected_conditions.presence_of_element_located(
-                            (By.XPATH, "//android.widget.EditText[@index=0]")
-                        )
-                    )
-                    sms_code_elem.click()
-                    sms_code_elem.send_keys(status)
                     break
                 except Exception:
-                    logger.info(f"Cannot get status code. Retry number {retry_count + 1}.")
+                    logger.info("Waiting for code ...")
 
             time.sleep(5)
-            retry_count += 1
+            max_retry_count -= 1
+
+        if not status:
+            raise CannotRetrieveSMSCode("Cannot retrieve sms code.")
+
+        logger.info(f"Code retrieved: {status}")
+        return status
 
     def divide_names(self, name: str):
         name = name.replace("\n", "")
         return name[:-1], name[-1]
-
-    @retry(Exception, 3, 5)
-    def fill_name_last_name(self, driver, name_to_fill: str, last_name_to_fill: str):
-        # this is a placeholder for waiting page to load
-        profile_info = WebDriverWait(driver, 20).until(  # noqa # type: ignore
-            expected_conditions.visibility_of_element_located(
-                (
-                    AppiumBy.XPATH,
-                    "//android.widget.FrameLayout//android.widget.LinearLayout//android.widget.TextView[@text='Profile info']",
-                )
-            )
-        )
-        first_name = WebDriverWait(driver, 10).until(
-            expected_conditions.visibility_of_element_located(
-                (AppiumBy.XPATH, "//android.widget.FrameLayout[@index=0]//android.widget.EditText")
-            )
-        )
-        first_name.click()
-        first_name.send_keys(name_to_fill)
-
-        last_name = WebDriverWait(driver, 10).until(
-            expected_conditions.visibility_of_element_located(
-                (
-                    AppiumBy.XPATH,
-                    (
-                        "//android.widget.FrameLayout[@index=3]"
-                        "//android.widget.FrameLayout[@index=1]//android.widget.EditText"
-                    ),
-                )
-            )
-        )
-        last_name.click()
-        last_name.send_keys(last_name_to_fill)
-
-        complete_name_part = WebDriverWait(driver, 10).until(
-            expected_conditions.visibility_of_element_located((AppiumBy.ACCESSIBILITY_ID, "Done"))
-        )
-        complete_name_part.click()
-
-        time.sleep(4)
-
-    def additional_pop_up_after_filling_name(self, driver):
-        try:
-            pop_up_access_contacts = WebDriverWait(driver, 10).until(
-                expected_conditions.visibility_of_element_located(
-                    (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().textContains("CONTINUE")')
-                )
-            )
-
-            # pop_up_access_contacts = driver.find_element_by_android_uiautomator(
-            #     'new UiSelector().textContains("CONTINUE")'
-            # )
-            pop_up_access_contacts.click()
-            time.sleep(4)
-            allow_contacts = driver.find_element(AppiumBy.XPATH, "//android.widget.Button[@text='Allow']")
-            allow_contacts.click()
-        except Exception:
-            pass
-
-        time.sleep(4)
-
-    def logout_from_telegram(self, driver):
-        nav_menu = driver.find_element(by=AppiumBy.ACCESSIBILITY_ID, value="Open navigation menu")
-        nav_menu.click()
-        time.sleep(3)
-        settings_elem = driver.find_element(
-            by=AppiumBy.XPATH,
-            value="//android.widget.TextView[@text='Settings']",
-        )
-        settings_elem.click()
-        more_opts = driver.find_element(
-            by=AppiumBy.XPATH,
-            value="//android.widget.ImageButton[@content-desc='More options']//android.widget.ImageView",
-        )
-        more_opts.click()
-        time.sleep(3)
-        logout_elem = driver.find_element(
-            by=AppiumBy.XPATH,
-            value="//android.widget.TextView[@text='Log out']",
-        )
-        logout_elem.click()
-        time.sleep(4)
-        logout_main = driver.find_element(
-            by=AppiumBy.XPATH,
-            value=(
-                "//androidx.recyclerview.widget.RecyclerView"
-                "//android.widget.FrameLayout[7]//android.widget.TextView[@text='Log Out']"
-            ),
-        )
-        logout_main.click()
-
-        time.sleep(3)
-        logout_popup = driver.find_element(
-            by=AppiumBy.XPATH,
-            value="//android.widget.TextView[@text='LOG OUT']",
-        )
-        logout_popup.click()
-
-    def stop_service(self):
-        if self._driver:
-            self._driver.quit()
-        self._appium_service.stop()
-
-    def write_list_to_file(self, filename: str, new_list: List[str]):
-        with open(filename, "w") as fh:
-            fh.writelines(new_list)
 
     def remove_current_picture(self, path_of_file: str):
         try:
@@ -371,33 +135,28 @@ class RegisterTelegram(AbstractAutomation):
             with open(self.output_dir + r"\phones.txt", "a") as fh:
                 fh.write(str(self._phone_number + "\n"))
 
-    def set_proxy(self, driver: webdriver.webdriver.WebDriver):
-        driver.launch_app("")
-
-    def get_latest_proxy(self):
-        if self.proxy_list:
-            return [proxy for proxy in self.proxy_list if "used" not in proxy.split(":")[-1]][0]
-
-    def set_proxy_used(self, current_proxy):
-        if self.proxy_list:
-            self.proxy_list[self.proxy_list.index(current_proxy)].replace(r"\n", r":used\n")
-
     def read_txt_proxy(self, proxy: str):
-        splitted_line = proxy.replace("\n", "").split(":")
+        splitted_line = proxy.split(":")
         proxy_dict = {}
-        proxy_dict["ip_address"] = splitted_line[0]
-        proxy_dict["port"] = splitted_line[1]
+        proxy_dict["addr"] = splitted_line[0]
+        proxy_dict["port"] = int(splitted_line[1])
         proxy_dict["username"] = splitted_line[2]
         proxy_dict["password"] = splitted_line[3]
+        proxy_dict["proxy_type"] = "socks5"
 
         return proxy_dict
+
+    def generate_username(self, name: str):
+        removed_digits = "".join([elem for elem in name if not elem.isdigit()])
+        return removed_digits[::-1] + removed_digits[::-1]
+
+    def delete_unsuccessful_session(self):
+        if os.path.isfile(f"sessions\\{self._phone_number}.session"):
+            os.remove(f"sessions\\{self._phone_number}.session")
 
     def run(self):
         self.names_copy = self.names.copy()
         self.running = True
-        if not self._driver:
-            self._driver = webdriver.Remote(f"http://localhost:{str(self._port)}/wd/hub", self._caps)
-        sd_client = None
         for name in self.names:
             with self.pause_cond:
                 while self.paused:
@@ -409,67 +168,139 @@ class RegisterTelegram(AbstractAutomation):
                 try:
                     logger.info(f"Starting registration with name {name}")
 
-                    current_proxy = None
-                    if self.proxy_list:
-                        self.install_socksdroid(self._driver)
-                        sd_client = SocksDroid(self._driver)
-                        current_proxy = self.get_latest_proxy()
-                        formatted_proxy = self.read_txt_proxy(current_proxy)  # type: ignore
-                        sd_client.set_proxy_socks_droid(**formatted_proxy)
-                        sd_client.enable_proxy()
-                        self._driver.activate_app(self._package_name)
-                    # it will initialize if not initialized yet
-                    self.start_messaging_screen(self._driver)
-                    self.allow_phone_calls(self._driver)
-                    self.fill_country_code_and_phone_number(self._driver)
-                    self.allow_read_call_log(self._driver)
-                    self.fill_sms_code(self._driver)
                     first_name, last_name = self.divide_names(name)
 
-                    self.fill_name_last_name(driver=self._driver, name_to_fill=first_name, last_name_to_fill=last_name)
-                    self.additional_pop_up_after_filling_name(self._driver)
-
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    telegram_client = TelegramClient(
-                        rf"sessions\{self._phone_number}", api_id=self.tg_api_id, api_hash=self.tg_api_hash
-                    )
+                    logger.info(f"Name: {first_name} \n Last Name: {last_name}")
+                    username = self.generate_username(name=name)
+                    logger.info(f"Username: {username}")
 
                     current_image = None
                     if self._list_of_profile_pics_path and self.profile_pics_path:
-                        current_image = self.profile_pics_path + "/" + self._list_of_profile_pics_path[0]
+                        logger.info(f"Profile image will used: {self._list_of_profile_pics_path[0]}")
+                        current_image = self.profile_pics_path + "\\" + self._list_of_profile_pics_path[0]
 
                     current_password = None
-                    if self.password_list:
-                        current_password = self.password_list[0]
+                    if self.passwords:
+                        current_password = self.passwords[0]
+                        logger.info(f"2FA password will set: {current_password}")
 
-                    tw_instance = TelethonWrapper(
-                        client=telegram_client,
-                        phone=self._phone_number,
-                        code_callback=self.get_verification_code,
-                        first_name=first_name,
-                        last_name=last_name,
-                        username=name[::-1],
-                        profile_image_path=current_image,
-                        password=current_password,
-                    )
+                    current_about = None
+                    if self.abouts:
+                        current_about = self.abouts[0]
+                        logger.info(f"About info will set: {current_about}")
 
-                    tw_instance.client.loop.run_until_complete(tw_instance.register_account())
-                    tw_instance.client.disconnect()
+                    formatted_proxy = None
+                    current_proxy = None
+                    if self.proxies:
+                        current_proxy = self.proxies[0]
+                        formatted_proxy = self.read_txt_proxy(current_proxy)  # type: ignore
+                        logger.info(f"Proxy will be used: {formatted_proxy['addr']}")
+
+                    device = None
+                    if self.devices:
+                        device = self.devices[0]
+                        logger.info(f"Device name will be used: {device}")
+
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                    retry_count = 0
+                    tw_instance = None
+                    success = False
+                    while retry_count < 5:
+                        try:
+                            self.get_number()
+                            telegram_client = TelegramClient(
+                                rf"sessions\{self._phone_number}",
+                                api_id=self.tg_api_id,
+                                api_hash=self.tg_api_hash,
+                                device_model=device if device else platform.uname().machine,
+                                system_version="" if device else platform.uname().release,
+                                proxy=formatted_proxy if formatted_proxy else {},
+                            )
+
+                            tw_instance = TelethonWrapper(
+                                client=telegram_client,
+                                phone=self._phone_number,
+                                code_callback=self.wait_sms_code,
+                                first_name=first_name,
+                                last_name=last_name,
+                                username=username,
+                                profile_image_path=current_image,
+                                password=current_password,
+                                about=current_about,
+                            )
+                            tw_instance.client.loop.run_until_complete(tw_instance.register_account())
+                            tw_instance.client.loop.run_until_complete(tw_instance.set_other_user_settings())
+                            tw_instance.client.disconnect()
+                            if isinstance(self.sms_operator, SmsActivate):
+                                self.sms_operator.set_status(self._activation_id, 6)
+                            elif isinstance(self.sms_operator, Sim5Net):
+                                pass
+                            success = True
+                        except NumberBannedException:
+                            logger.info(f"{self._phone_number} is banned. New number will be tried.")
+                            if isinstance(self.sms_operator, SmsActivate):
+                                self.sms_operator.set_status(self._activation_id, 8)
+                            elif isinstance(self.sms_operator, Sim5Net):
+                                pass
+                            self.delete_unsuccessful_session()
+                        except CannotRetrieveSMSCode:
+                            logger.info("Cannot retrieve sms code for current number.")
+                            self.delete_unsuccessful_session()
+                            if isinstance(self.sms_operator, SmsActivate):
+                                self.sms_operator.set_status(self._activation_id, 8)
+                            elif isinstance(self.sms_operator, Sim5Net):
+                                pass
+                        except Exception as e:
+                            logger.info(f"Unknown exception {str(e)}.")
+                            self.delete_unsuccessful_session()
+                            if isinstance(self.sms_operator, SmsActivate):
+                                self.sms_operator.set_status(self._activation_id, 8)
+                            elif isinstance(self.sms_operator, Sim5Net):
+                                pass
+                            raise Exception(e)
+                            break
+                        finally:
+                            if tw_instance and tw_instance.client:
+                                tw_instance.client.disconnect()
+
+                        retry_count += 1
+                        if success:
+                            break
+
+                    if not success:
+                        raise RegisterTelegramException("Cannot register account due to unknown reasons.")
+
+                    # Clean up
                     self.names_copy.remove(name)
-                    self.write_list_to_file(self.filename, self.names_copy)
+                    self.write_list_to_file("names", self.names_copy)
 
-                    if self.proxy_list and current_proxy:
-                        self.set_proxy_used(current_proxy)
-                        self.write_list_to_file(self.proxy_filename, self.proxy_list)  # type: ignore
-
-                    if current_password and self.password_list:
-                        self.password_list.remove(current_password)
-                        self.write_list_to_file(self.password_filename, self.password_list)  # type: ignore
-
+                    # Remove image
                     if current_image and self._list_of_profile_pics_path:
                         self.remove_current_picture(current_image)
                         del self._list_of_profile_pics_path[0]
+
+                    # Remove password
+                    if current_password and self.passwords:
+                        self.passwords.remove(current_password)
+                        self.write_list_to_file("passwords", self.passwords)
+
+                    # Remove about
+                    if current_about and self.abouts:
+                        self.abouts.remove(current_about)
+                        self.write_list_to_file("about", self.abouts)
+
+                    # Remove proxy
+                    if current_proxy and self.proxies:
+                        self.proxies.remove(current_proxy)
+                        self.write_list_to_file("proxies", self.proxies)
+
+                    # Remove device
+                    if device and self.devices:
+                        self.devices.remove(device)
+                        self.write_list_to_file("devices", self.devices)
+
                     self.write_output_files()
                     logger.info(f"Registration complete for {name}.")
 
@@ -478,19 +309,3 @@ class RegisterTelegram(AbstractAutomation):
                     break
                 except Exception as e:
                     logger.info(f"Exception occured with {str(e)}")
-                finally:
-                    if ADBHelper().clear_app_history(device_name=self.device_name, package_name=self._package_name):
-                        logger.info(f"Successfully app data cleaned: {self._package_name}")
-                    else:
-                        logger.info(f"Cleaning app data not successful: {self._package_name}")
-                    if sd_client:
-                        if ADBHelper().clear_app_history(
-                            device_name=self.device_name, package_name=sd_client._package_name
-                        ):
-                            logger.info(f"Successfully app data cleaned: {sd_client._package_name}")
-                        else:
-                            logger.info(f"Cleaning app data not successful: {self._package_name}")
-                    if self._driver:
-                        self._driver.reset()
-
-        self.stop_service()

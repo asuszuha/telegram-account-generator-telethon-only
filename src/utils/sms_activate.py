@@ -1,4 +1,3 @@
-from re import L
 from smsactivate.api import SMSActivateAPI
 
 
@@ -45,10 +44,10 @@ class SmsActivate:
         response = self._sms_api.getStatus(activation_id)
         if type(response) is dict and "error" in response.keys():
             raise StatusException(response["message"])
-        if type(response) == str and "WAIT_CODE" in response.upper():
+        if type(response) == str and "WAIT_CODE" in response.upper():  # type: ignore
             raise StatusException("Waiting for status")
-        return response.split(":")[1]
+        return response.split(":")[1]  # type: ignore
 
-    def set_status(self, activation_id: int):
-        response = self._sms_api.setStatus(id=activation_id, status=1)
-        print(response)
+    def set_status(self, activation_id: int, status: int):
+        response = self._sms_api.setStatus(id=activation_id, status=status)
+        return response

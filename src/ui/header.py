@@ -28,5 +28,5 @@ class Header(ttk.Frame):
         self.btn_pause.grid(row=0, column=1, sticky="w")
         self.btn_stop.grid(row=0, column=2, sticky="w")
 
-        self.lbl_current_instance = ttk.Label(self, text=f"Current Running Instance: {os.getcwd()}", wraplength=400)
+        self.lbl_current_instance = ttk.Label(self, text=f"Current Running Instance: {os.getcwd()}", wraplength=300)
         self.lbl_current_instance.grid(row=0, column=3, sticky="w", padx=((20, 20)))
