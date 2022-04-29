@@ -8,19 +8,16 @@ from typing import List, Union
 from telethon import TelegramClient
 
 from src.automation.abstract_automation import AbstractAutomation
+from src.automation.exceptions_automation import (
+    CannotRetrieveSMSCode,
+    NoTelegramApiInfoFoundException,
+    RegisterTelegramException,
+)
 from src.utils.logger import logger
 from src.utils.sim5_net import NoFreePhoneException, PurchaseNotPossibleException, Sim5Net
 from src.utils.sms_activate import NoNumbersException, SmsActivate
 
 from .telethon_wrapper import NumberBannedException, TelethonWrapper
-
-
-class RegisterTelegramException(Exception):
-    pass
-
-
-class CannotRetrieveSMSCode(RegisterTelegramException):
-    pass
 
 
 class RegisterTelegram(AbstractAutomation):
@@ -29,8 +26,8 @@ class RegisterTelegram(AbstractAutomation):
         sms_operator: Union[Sim5Net, SmsActivate],
         sms_timeout: str,
         country: str,
-        tg_api_id: str,
-        tg_api_hash: str,
+        sms_after_code_op: str,
+        maximum_register: str,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -44,25 +41,25 @@ class RegisterTelegram(AbstractAutomation):
         self.proxies = self.read_file_with_property("proxies")
         self.abouts = self.read_file_with_property("about")
         self.passwords = self.read_file_with_property("passwords")
-        self.output_dir = "output"
+        self.apis = self.read_file_with_property("api")
+        self.output_dir = "sessions"
         self.profile_pics_path = "profile_pics"
         self._list_of_profile_pics_path = os.listdir(self.profile_pics_path)
-
-        self.tg_api_id = tg_api_id
-        self.tg_api_hash = tg_api_hash
-
         self.sms_timeout = int(sms_timeout)
+        self.sms_after_code_op = 6 if sms_after_code_op == "cancel" else None
+        self.maximum_register = int(maximum_register)
+        self.tw_instance = None
 
     def read_file_with_property(self, filename: str):
         if os.path.exists(f"data\\{filename}.txt"):
-            with open(f"data\\{filename}.txt", "r") as fh:
-                return [line.replace("\\n", "") for line in fh.readlines()]
+            with open(f"data\\{filename}.txt", "r", encoding="utf-8") as fh:
+                return [line.replace("\n", "") for line in fh.readlines()]
         else:
             logger.exception(f"Please put {filename} file under data folder.")
             raise Exception("No names file detected!")
 
     def write_list_to_file(self, filename: str, new_list: List[str]):
-        new_list = [elem + "\n" for elem in new_list]
+        new_list = [elem + "\n" for elem in new_list]  # type: ignore
         with open(f"data\\{filename}.txt", "w") as fh:
             fh.writelines(new_list)
 
@@ -97,6 +94,7 @@ class RegisterTelegram(AbstractAutomation):
         # TODO: If not received throw error
         status = None
         while max_retry_count > 0:
+
             if isinstance(self.sms_operator, SmsActivate):
                 try:
                     status = self.sms_operator.get_status(self._number["activation_id"])  # type: ignore
@@ -112,6 +110,19 @@ class RegisterTelegram(AbstractAutomation):
                     logger.info("Waiting for code ...")
 
             time.sleep(5)
+            while self.paused:
+                self.pause_cond.wait()
+
+            if self.stopped:
+                try:
+                    if self.tw_instance and self.tw_instance.client:
+                        self.tw_instance.client.loop.stop()
+                    self.running = False
+                    self.delete_unsuccessful_session()
+                except Exception:
+                    ...
+                finally:
+                    break
             max_retry_count -= 1
 
         if not status:
@@ -148,31 +159,52 @@ class RegisterTelegram(AbstractAutomation):
 
     def generate_username(self, name: str):
         removed_digits = "".join([elem for elem in name if not elem.isdigit()])
-        return removed_digits[::-1] + removed_digits[::-1]
+        return removed_digits[::-1] + removed_digits[0]
 
     def delete_unsuccessful_session(self):
-        if os.path.isfile(f"sessions\\{self._phone_number}.session"):
-            os.remove(f"sessions\\{self._phone_number}.session")
+        if hasattr(self, "_phone_number"):
+            if self.tw_instance and self.tw_instance.client:
+                self.tw_instance.client.disconnect()
+            if self._phone_number:
+                if os.path.isfile(f"sessions\\{self._phone_number}.session"):
+                    os.remove(f"sessions\\{self._phone_number}.session")
 
     def run(self):
         self.names_copy = self.names.copy()
         self.running = True
+        if not self.names:
+            tkmb.showerror("No Names Given", "There are no names given to process. Please fill names.txt file.")
+
+        registration_counter = 0
         for name in self.names:
             with self.pause_cond:
                 while self.paused:
                     self.pause_cond.wait()
 
                 if self.stopped:
+                    if self.tw_instance and self.tw_instance.client:
+                        self.tw_instance.client.loop.stop()
                     self.running = False
                     break
                 try:
-                    logger.info(f"Starting registration with name {name}")
+                    logger.info(
+                        f"Starting registration with name {name} | Registration count: {str(registration_counter)}"
+                    )
 
                     first_name, last_name = self.divide_names(name)
 
                     logger.info(f"Name: {first_name} \n Last Name: {last_name}")
                     username = self.generate_username(name=name)
                     logger.info(f"Username: {username}")
+
+                    current_tg_api_id = None
+                    current_tg_hash = None
+                    if self.apis:
+                        splitted_api_info = self.apis[0].split("-")
+                        current_tg_api_id = splitted_api_info[0]
+                        current_tg_hash = splitted_api_info[1]
+                    else:
+                        raise NoTelegramApiInfoFoundException("No telegram api info found.")
 
                     current_image = None
                     if self._list_of_profile_pics_path and self.profile_pics_path:
@@ -205,21 +237,21 @@ class RegisterTelegram(AbstractAutomation):
                     asyncio.set_event_loop(loop)
 
                     retry_count = 0
-                    tw_instance = None
+                    self.tw_instance = None
                     success = False
                     while retry_count < 5:
                         try:
                             self.get_number()
                             telegram_client = TelegramClient(
                                 rf"sessions\{self._phone_number}",
-                                api_id=self.tg_api_id,
-                                api_hash=self.tg_api_hash,
+                                api_id=current_tg_api_id,
+                                api_hash=current_tg_hash,
                                 device_model=device if device else platform.uname().machine,
                                 system_version="" if device else platform.uname().release,
                                 proxy=formatted_proxy if formatted_proxy else {},
                             )
 
-                            tw_instance = TelethonWrapper(
+                            self.tw_instance = TelethonWrapper(
                                 client=telegram_client,
                                 phone=self._phone_number,
                                 code_callback=self.wait_sms_code,
@@ -228,18 +260,25 @@ class RegisterTelegram(AbstractAutomation):
                                 username=username,
                                 profile_image_path=current_image,
                                 password=current_password,
-                                about=current_about,
+                                about=current_about[:70]
+                                if current_about and len(current_about) > 70
+                                else current_about
+                                if current_about
+                                else "",  # max char limit
                             )
-                            tw_instance.client.loop.run_until_complete(tw_instance.register_account())
-                            tw_instance.client.loop.run_until_complete(tw_instance.set_other_user_settings())
-                            tw_instance.client.disconnect()
+                            self.tw_instance.client.loop.run_until_complete(self.tw_instance.register_account())
+                            self.tw_instance.client.loop.run_until_complete(self.tw_instance.set_other_user_settings())
+                            self.tw_instance.client.disconnect()
                             if isinstance(self.sms_operator, SmsActivate):
-                                self.sms_operator.set_status(self._activation_id, 6)
+                                if self.sms_after_code_op:
+                                    self.sms_operator.set_status(self._activation_id, self.sms_after_code_op)
                             elif isinstance(self.sms_operator, Sim5Net):
                                 pass
                             success = True
                         except NumberBannedException:
                             logger.info(f"{self._phone_number} is banned. New number will be tried.")
+                            if self.tw_instance and self.tw_instance.client:
+                                self.tw_instance.client.disconnect()
                             if isinstance(self.sms_operator, SmsActivate):
                                 self.sms_operator.set_status(self._activation_id, 8)
                             elif isinstance(self.sms_operator, Sim5Net):
@@ -247,29 +286,57 @@ class RegisterTelegram(AbstractAutomation):
                             self.delete_unsuccessful_session()
                         except CannotRetrieveSMSCode:
                             logger.info("Cannot retrieve sms code for current number.")
+                            if self.tw_instance and self.tw_instance.client:
+                                self.tw_instance.client.disconnect()
                             self.delete_unsuccessful_session()
                             if isinstance(self.sms_operator, SmsActivate):
                                 self.sms_operator.set_status(self._activation_id, 8)
                             elif isinstance(self.sms_operator, Sim5Net):
                                 pass
+                        except (NoNumbersException, PurchaseNotPossibleException, NoFreePhoneException) as e:
+                            raise NoNumbersException(str(e))
                         except Exception as e:
                             logger.info(f"Unknown exception {str(e)}.")
+                            if self.tw_instance and self.tw_instance.client:
+                                self.tw_instance.client.disconnect()
                             self.delete_unsuccessful_session()
                             if isinstance(self.sms_operator, SmsActivate):
                                 self.sms_operator.set_status(self._activation_id, 8)
                             elif isinstance(self.sms_operator, Sim5Net):
                                 pass
-                            raise Exception(e)
-                            break
-                        finally:
-                            if tw_instance and tw_instance.client:
-                                tw_instance.client.disconnect()
+
+                            raise e
 
                         retry_count += 1
                         if success:
                             break
 
+                        while self.paused:
+                            self.pause_cond.wait()
+
+                        if self.stopped:
+                            if self.tw_instance and self.tw_instance.client:
+                                self.tw_instance.client.loop.stop()
+                            self.running = False
+                            self.delete_unsuccessful_session()
+                            break
+
+                    while self.paused:
+                        self.pause_cond.wait()
+
+                    if self.stopped:
+                        if self.tw_instance and self.tw_instance.client:
+                            self.tw_instance.client.loop.stop()
+                        self.running = False
+                        try:
+                            self.delete_unsuccessful_session()
+                        except Exception:
+                            ...
+                        finally:
+                            break
+
                     if not success:
+                        self.delete_unsuccessful_session()
                         raise RegisterTelegramException("Cannot register account due to unknown reasons.")
 
                     # Clean up
@@ -301,11 +368,25 @@ class RegisterTelegram(AbstractAutomation):
                         self.devices.remove(device)
                         self.write_list_to_file("devices", self.devices)
 
-                    self.write_output_files()
-                    logger.info(f"Registration complete for {name}.")
+                    # Remove api info
+                    self.apis.remove(self.apis[0])
+                    self.write_list_to_file("api", self.apis)
 
-                except (NoNumbersException, PurchaseNotPossibleException, NoFreePhoneException):
-                    tkmb.showerror("Error Occured", "No numbers found")
+                    self.write_output_files()
+                    registration_counter += 1
+
+                    logger.info(f"Registration complete for {name}.")
+                    if self.maximum_register and self.maximum_register <= registration_counter:
+                        logger.info(f"Reached maximum number of registrations {str(self.maximum_register)}.")
+                        break
+                except NoNumbersException:
+                    self.delete_unsuccessful_session()
+                    tkmb.showerror("Error Occured", "No numbers found.")
+                    break
+                except NoTelegramApiInfoFoundException:
+                    self.delete_unsuccessful_session()
+                    tkmb.showerror("Error Occured", "No telegram api info found.")
                     break
                 except Exception as e:
+                    self.delete_unsuccessful_session()
                     logger.info(f"Exception occured with {str(e)}")

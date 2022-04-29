@@ -1,9 +1,10 @@
-import threading
 import abc
+import threading
+
 
 class AbstractAutomation(threading.Thread, abc.ABC):
     def __init__(self):
-        threading.Thread.__init__(self)
+        super(AbstractAutomation, self).__init__()
         self.paused = False
         self.stopped = False
         self.running = False

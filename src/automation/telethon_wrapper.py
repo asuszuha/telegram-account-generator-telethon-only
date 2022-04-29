@@ -3,6 +3,7 @@ from telethon.errors import PhoneNumberBannedError
 from telethon.tl.functions.account import UpdateProfileRequest, UpdateUsernameRequest
 from telethon.tl.functions.photos import UploadProfilePhotoRequest
 
+from src.automation.exceptions_automation import CannotRetrieveSMSCode
 from src.utils.logger import logger
 
 
@@ -51,8 +52,11 @@ class TelethonWrapper:
         except PhoneNumberBannedError as pbe:
             logger.info(str(pbe))
             raise NumberBannedException(str(pbe))
+        except CannotRetrieveSMSCode as crs:
+            raise CannotRetrieveSMSCode(str(crs))
         except Exception as e:
             logger.info(f"Unknown error occured: {str(e)}")
+            raise Exception(e)
 
     async def set_other_user_settings(self):
         if self.profile_image_path:

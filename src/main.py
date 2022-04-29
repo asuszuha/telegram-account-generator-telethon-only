@@ -1,3 +1,4 @@
+import configparser
 import logging
 import os
 import platform
@@ -32,7 +33,7 @@ class TelegramAccountCreator(tk.Tk):
             print("Not recognized platform. No icon will be set.")
             raise Exception("Not recognized platform.")
 
-        self.title("Telegram Auto Account v0.3.0_beta (telethon only)")
+        self.title("Telegram Auto Account v0.4.2 (telethon only)")
         self.header = Header(parent=self)
         self.header.grid(row=0, column=0, sticky="w")
 
@@ -70,8 +71,21 @@ class TelegramAccountCreator(tk.Tk):
             with open(r"data\passwords.txt", "a") as fh:
                 fh.close()
 
-        if not os.path.exists("output"):
-            os.mkdir("output")
+        if not os.path.exists(r"data\proxies.txt"):
+            with open(r"data\proxies.txt", "a") as fh:
+                fh.close()
+
+        if not os.path.exists(r"data\api.txt"):
+            with open(r"data\api.txt", "a") as fh:
+                fh.close()
+
+        if not os.path.exists(r"sim_provider_config.ini"):
+            with open(r"sim_provider_config.ini", "w") as fh:
+                config_file = configparser.ConfigParser()
+                config_file.add_section("SIMProviderAPIKeys")
+                config_file.set("SIMProviderAPIKeys", "5sim_api_key", "")
+                config_file.set("SIMProviderAPIKeys", "sms_activate_api_key", "")
+                config_file.write(fh)
 
         if not os.path.exists("sessions"):
             os.mkdir("sessions")
@@ -82,9 +96,10 @@ class TelegramAccountCreator(tk.Tk):
             self._current_running_tab = self.ui_body
             self._current_running_tab.run()
             if self._current_running_tab.frame_thread:
-                threading.Thread(
+                self.reset_thread = threading.Thread(
                     target=self.reset_status_after_complete, args=[self._current_running_tab.frame_thread]
-                ).start()
+                )
+                self.reset_thread.start()
             else:
                 self._current_running_tab = None
                 return
@@ -125,12 +140,28 @@ class TelegramAccountCreator(tk.Tk):
         for child in self._current_running_tab.winfo_children():  # type: ignore
             child.configure(state=state)  # type: ignore
 
+    def on_closing(self):
+        if self._current_running_tab:
+            if (
+                self._current_running_tab.frame_thread.tw_instance
+                and self._current_running_tab.frame_thread.tw_instance.client
+            ):
+                self._current_running_tab.frame_thread.tw_instance.client.loop.close()
+            self._current_running_tab.frame_thread.stop()
+            self._current_running_tab.frame_thread.join()
+            self.reset_thread.join()
+            self.quit()
+        else:
+            self.quit()
 
-def main():
-    nft_app = TelegramAccountCreator()
-    nft_app.mainloop()
+
+# def main():
+#     nft_app = TelegramAccountCreator()
+#     nft_app.protocol("WM_DELETE_WINDOW", on_closing)
+#     nft_app.mainloop()
 
 
 if __name__ == "__main__":
     nft_app = TelegramAccountCreator()
+    nft_app.protocol("WM_DELETE_WINDOW", nft_app.on_closing)
     nft_app.mainloop()

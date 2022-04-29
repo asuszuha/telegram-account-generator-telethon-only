@@ -1,1 +1,1 @@
-pyinstaller --clean -n telegram_register_bot --hidden-import src --onefile src\main.py --noconsole --icon src\icons\windows\telegram.ico
+pyinstaller --clean -n telegram_register_bot_telethon --hidden-import src --onefile src\main.py --noconsole --icon src\icons\windows\telegram.ico

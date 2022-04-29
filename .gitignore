@@ -134,3 +134,4 @@ test_telethon.py
 sessions/
 data/
 output/
+sim_provider_config.ini

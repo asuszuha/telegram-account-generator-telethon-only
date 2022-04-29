@@ -17,6 +17,9 @@ class CannotRetrieveCountries(SmsActivateException):
     pass
 
 
+global list_of_countries
+
+
 class SmsActivate:
     def __init__(self, api_key: str):
         self._sms_api = SMSActivateAPI(api_key)
@@ -32,9 +35,9 @@ class SmsActivate:
 
         return list_of_countries
 
-    def get_number(self, country: str, verification="true"):
+    def get_number(self, country: str):
         country_id = self._countries.index(country)
-        number = self._sms_api.getNumber(service="tg", country=country_id, verification=verification)
+        number = self._sms_api.getNumber(service="tg", country=country_id, verification="false")
         if "error" in number.keys():
             raise NoNumbersException(number["message"])
 
