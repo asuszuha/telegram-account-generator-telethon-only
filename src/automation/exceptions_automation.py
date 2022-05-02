@@ -8,3 +8,19 @@ class CannotRetrieveSMSCode(RegisterTelegramException):
 
 class NoTelegramApiInfoFoundException(RegisterTelegramException):
     pass
+
+
+class AddUserException(Exception):
+    pass
+
+
+class CannotOpenLoadPhoneNumbers(AddUserException):
+    pass
+
+
+class NoTelegramApiInfoFoundAddUserException(AddUserException):
+    pass
+
+
+class ClientNotAuthorizedException(AddUserException):
+    pass

@@ -6,7 +6,9 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 
-from src.ui.body import BodyTelegramBot
+from src.ui.abstract_frame_ui import AbstractTab
+from src.ui.add_users_ui import AddTgUsers
+from src.ui.auto_register import AutoRegisterTg
 from src.ui.header import Header
 from src.utils.logger import ConsoleUi, logger
 
@@ -34,15 +36,21 @@ class TelegramAccountCreator(tk.Tk):
             raise Exception("Not recognized platform.")
 
         self.title("Telegram Auto Account v0.4.2 (telethon only)")
+        self.tabs_in_main_page = ttk.Notebook(self)
+        self.tabs_in_main_page.grid(row=1, column=0, sticky="nsew")
         self.header = Header(parent=self)
         self.header.grid(row=0, column=0, sticky="w")
-
-        self.ui_body = BodyTelegramBot(self)
-        self.ui_body.grid(row=1, column=0, sticky="nsew")
 
         self.header.btn_run.configure(command=self.run)
         self.header.btn_pause.configure(command=self.pause)
         self.header.btn_stop.configure(command=self.stop)
+
+        auto_register_tg = AutoRegisterTg(self.tabs_in_main_page)
+        add_tg_users = AddTgUsers(self.tabs_in_main_page)
+
+        auto_register_tg.pack(fill=tk.BOTH, expand=True)
+        self.tabs_in_main_page.add(auto_register_tg, text="Auto Register")
+        self.tabs_in_main_page.add(add_tg_users, text="Add Users")
 
         console = ConsoleUi(self)
         console.grid(row=2, column=0, sticky="nsew")
@@ -79,6 +87,14 @@ class TelegramAccountCreator(tk.Tk):
             with open(r"data\api.txt", "a") as fh:
                 fh.close()
 
+        if not os.path.exists(r"data\groups.txt"):
+            with open(r"data\groups.txt", "a") as fh:
+                fh.close()
+
+        if not os.path.exists(r"data\user.txt"):
+            with open(r"data\user.txt", "a") as fh:
+                fh.close()
+
         if not os.path.exists(r"sim_provider_config.ini"):
             with open(r"sim_provider_config.ini", "w") as fh:
                 config_file = configparser.ConfigParser()
@@ -90,10 +106,13 @@ class TelegramAccountCreator(tk.Tk):
         if not os.path.exists("sessions"):
             os.mkdir("sessions")
 
+        if not os.path.exists("used_sessions"):
+            os.mkdir("used_sessions")
+
     def run(self):
 
         if not self._current_running_tab:
-            self._current_running_tab = self.ui_body
+            self._current_running_tab = self.get_tab_selected_child(self.tabs_in_main_page)
             self._current_running_tab.run()
             if self._current_running_tab.frame_thread:
                 self.reset_thread = threading.Thread(
@@ -107,10 +126,13 @@ class TelegramAccountCreator(tk.Tk):
             self.header.btn_run["state"] = "disabled"
             self.header.btn_pause["state"] = "normal"
             self.header.btn_stop["state"] = "enabled"
-            self.change_status_of_frame(tk.DISABLED)
+            self.change_status_of_tabs(tk.DISABLED)
             self.header.btn_run["text"] = "Resume"
         else:
             self._current_running_tab.run()
+            self.header.btn_run["state"] = "disabled"
+            self.header.btn_pause["state"] = "normal"
+            self.header.btn_stop["state"] = "enabled"
 
     def pause(self):
         if self._current_running_tab:
@@ -128,7 +150,7 @@ class TelegramAccountCreator(tk.Tk):
         self.header.btn_run["state"] = "normal"
         self.header.btn_pause["state"] = "disabled"
         self.header.btn_stop["state"] = "disabled"
-        self.change_status_of_frame(tk.NORMAL)
+        self.change_status_of_tabs(tk.NORMAL)
         self._current_running_tab = None
         self.header.btn_run["text"] = "Run"
 
@@ -136,17 +158,22 @@ class TelegramAccountCreator(tk.Tk):
     def get_current_running_tab(self):
         return self._current_running_tab
 
-    def change_status_of_frame(self, state):
-        for child in self._current_running_tab.winfo_children():  # type: ignore
-            child.configure(state=state)  # type: ignore
+    def get_tab_selected_child(self, notebook: ttk.Notebook) -> AbstractTab:
+        selected_tab = self.tabs_in_main_page.select()
+        return [child for child in notebook.winfo_children() if child._w == selected_tab][0]  # type: ignore
+
+    # def change_status_of_frame(self, state):
+    #     for child in self._current_running_tab.winfo_children():  # type: ignore
+    #         child.configure(state=state)  # type: ignore
+
+    def change_status_of_tabs(self, state: str):
+        for i, item in enumerate(self.tabs_in_main_page.tabs()):
+            self.tabs_in_main_page.tab(item, state=state)
+
+        self.tabs_in_main_page.select(self._current_running_tab._w)  # type: ignore
 
     def on_closing(self):
-        if self._current_running_tab:
-            if (
-                self._current_running_tab.frame_thread.tw_instance
-                and self._current_running_tab.frame_thread.tw_instance.client
-            ):
-                self._current_running_tab.frame_thread.tw_instance.client.loop.close()
+        if self._current_running_tab and self._current_running_tab.frame_thread:
             self._current_running_tab.frame_thread.stop()
             self._current_running_tab.frame_thread.join()
             self.reset_thread.join()

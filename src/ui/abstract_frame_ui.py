@@ -2,7 +2,7 @@ import abc
 from tkinter import ttk
 
 
-class AbstractFrame(ttk.Frame, abc.ABC):
+class AbstractTab(ttk.Frame, abc.ABC):
     def __init__(self, parent):
         ttk.Frame.__init__(self, parent)
         self.frame_thread = None

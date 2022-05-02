@@ -3,7 +3,7 @@ import os
 import platform
 import time
 import tkinter.messagebox as tkmb
-from typing import List, Union
+from typing import Union
 
 from telethon import TelegramClient
 
@@ -17,7 +17,7 @@ from src.utils.logger import logger
 from src.utils.sim5_net import NoFreePhoneException, PurchaseNotPossibleException, Sim5Net
 from src.utils.sms_activate import NoNumbersException, SmsActivate
 
-from .telethon_wrapper import NumberBannedException, TelethonWrapper
+from .telethon_wrapper import NumberBannedException, PossibleProxyIssueException, TelethonWrapper
 
 
 class RegisterTelegram(AbstractAutomation):
@@ -28,6 +28,7 @@ class RegisterTelegram(AbstractAutomation):
         country: str,
         sms_after_code_op: str,
         maximum_register: str,
+        proxy_enabled: int,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -38,7 +39,10 @@ class RegisterTelegram(AbstractAutomation):
         # Init from files
         self.names = self.read_file_with_property("names")
         self.devices = self.read_file_with_property("devices")
-        self.proxies = self.read_file_with_property("proxies")
+        if proxy_enabled:
+            self.proxies = self.read_file_with_property("proxies")
+        else:
+            self.proxies = []
         self.abouts = self.read_file_with_property("about")
         self.passwords = self.read_file_with_property("passwords")
         self.apis = self.read_file_with_property("api")
@@ -49,19 +53,6 @@ class RegisterTelegram(AbstractAutomation):
         self.sms_after_code_op = 6 if sms_after_code_op == "cancel" else None
         self.maximum_register = int(maximum_register)
         self.tw_instance = None
-
-    def read_file_with_property(self, filename: str):
-        if os.path.exists(f"data\\{filename}.txt"):
-            with open(f"data\\{filename}.txt", "r", encoding="utf-8") as fh:
-                return [line.replace("\n", "") for line in fh.readlines()]
-        else:
-            logger.exception(f"Please put {filename} file under data folder.")
-            raise Exception("No names file detected!")
-
-    def write_list_to_file(self, filename: str, new_list: List[str]):
-        new_list = [elem + "\n" for elem in new_list]  # type: ignore
-        with open(f"data\\{filename}.txt", "w") as fh:
-            fh.writelines(new_list)
 
     def get_number(self):
         logger.info(f"Getting number from country: {self.country}")
@@ -249,25 +240,30 @@ class RegisterTelegram(AbstractAutomation):
                                 device_model=device if device else platform.uname().machine,
                                 system_version="" if device else platform.uname().release,
                                 proxy=formatted_proxy if formatted_proxy else {},
+                                base_logger=logger,
                             )
 
-                            self.tw_instance = TelethonWrapper(
-                                client=telegram_client,
-                                phone=self._phone_number,
-                                code_callback=self.wait_sms_code,
-                                first_name=first_name,
-                                last_name=last_name,
-                                username=username,
-                                profile_image_path=current_image,
-                                password=current_password,
-                                about=current_about[:70]
-                                if current_about and len(current_about) > 70
-                                else current_about
-                                if current_about
-                                else "",  # max char limit
+                            self.tw_instance = TelethonWrapper(client=telegram_client, phone=self._phone_number)
+                            self.tw_instance.client.loop.run_until_complete(
+                                self.tw_instance.register_account(
+                                    code_callback=self.wait_sms_code,
+                                    first_name=first_name,
+                                    last_name=last_name,
+                                    password=current_password,
+                                )
                             )
-                            self.tw_instance.client.loop.run_until_complete(self.tw_instance.register_account())
-                            self.tw_instance.client.loop.run_until_complete(self.tw_instance.set_other_user_settings())
+                            self.tw_instance.client.loop.run_until_complete(
+                                self.tw_instance.set_other_user_settings(
+                                    username=username,
+                                    password=current_password if current_password else "",
+                                    profile_image_path=current_image,
+                                    about=current_about[:70]
+                                    if current_about and len(current_about) > 70
+                                    else current_about
+                                    if current_about
+                                    else "",  # max char limit
+                                )
+                            )
                             self.tw_instance.client.disconnect()
                             if isinstance(self.sms_operator, SmsActivate):
                                 if self.sms_after_code_op:
@@ -295,6 +291,17 @@ class RegisterTelegram(AbstractAutomation):
                                 pass
                         except (NoNumbersException, PurchaseNotPossibleException, NoFreePhoneException) as e:
                             raise NoNumbersException(str(e))
+                        except PossibleProxyIssueException:
+                            if current_proxy and self.proxies:
+                                logger.info(
+                                    (
+                                        f"Current proxy has issues to connect: {current_proxy}. "
+                                        "It will be removed from proxy list."
+                                    )
+                                )
+                                self.proxies.remove(current_proxy)
+                                self.write_list_to_file("proxies", self.proxies)
+                                current_proxy = self.proxies[0]
                         except Exception as e:
                             logger.info(f"Unknown exception {str(e)}.")
                             if self.tw_instance and self.tw_instance.client:

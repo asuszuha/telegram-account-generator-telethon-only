@@ -135,3 +135,4 @@ sessions/
 data/
 output/
 sim_provider_config.ini
+used_sessions/

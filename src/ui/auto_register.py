@@ -1,14 +1,13 @@
 import configparser
 import tkinter.messagebox as tkmb
 from enum import Enum
-from tkinter import StringVar, ttk
+from tkinter import IntVar, StringVar, ttk
 
 from idlelib.tooltip import Hovertip
 
 from src.automation.register_telegram import RegisterTelegram
-from src.ui.abstract_frame_ui import AbstractFrame
+from src.ui.abstract_frame_ui import AbstractTab
 from src.ui.generic_styles import set_cbox_attributes
-from src.utils.adb_helper import ADBHelper
 from src.utils.sim5_net import Sim5Net
 from src.utils.sms_activate import SmsActivate, SmsActivateException
 
@@ -21,10 +20,9 @@ class SMSOperators(Enum):
 SMS_OPERATORS = ["Select", SMSOperators.SMS5SIMNET.value, SMSOperators.SMSACTIVATE.value]
 
 
-class BodyTelegramBot(AbstractFrame):
+class AutoRegisterTg(AbstractTab):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, **kwargs)
-        self.adb_helper = ADBHelper()
         self._create_first_column()
         self._create_second_column()
         self._sms_activate_client = None
@@ -61,6 +59,10 @@ class BodyTelegramBot(AbstractFrame):
         self._cbox_select_country.grid(row=5, column=0, sticky="w", padx=(10, 5))
 
     def _create_second_column(self):
+        self.var_proxy_enabled = IntVar(value=0)
+        _chb_proxy_enabled = ttk.Checkbutton(self, text="Enable proxy", variable=self.var_proxy_enabled)
+        _chb_proxy_enabled.grid(row=0, column=1, sticky="w", padx=(5, 5))
+
         # Registration Counter
         lbl_register_account = ttk.Label(self, text="Number of accounts to Register:")
 
@@ -72,16 +74,16 @@ class BodyTelegramBot(AbstractFrame):
 
         self._entry_register_account.bind("<KeyRelease>", self._check_register_amount)
 
-        lbl_register_account.grid(row=0, column=1, sticky="w", padx=(5, 5))
-        self._entry_register_account.grid(row=1, column=1, sticky="w", padx=(10, 5))
+        lbl_register_account.grid(row=1, column=1, sticky="w", padx=(5, 5))
+        self._entry_register_account.grid(row=2, column=1, sticky="w", padx=(10, 5))
 
         lbl_select_sms_op = ttk.Label(self, text="After Code Received:")
         self.var_sms_after_option = StringVar(value="cancel")
         r_cancel = ttk.Radiobutton(self, text="Cancel Number", value="cancel", variable=self.var_sms_after_option)
         r_none = ttk.Radiobutton(self, text="None", value="none", variable=self.var_sms_after_option)
-        lbl_select_sms_op.grid(row=2, column=1, sticky="w", padx=(5, 5))
-        r_cancel.grid(row=3, column=1, sticky="w", padx=(10, 5))
-        r_none.grid(row=4, column=1, sticky="w", padx=(10, 5))
+        lbl_select_sms_op.grid(row=3, column=1, sticky="w", padx=(5, 5))
+        r_cancel.grid(row=4, column=1, sticky="w", padx=(10, 5))
+        r_none.grid(row=5, column=1, sticky="w", padx=(10, 5))
 
     def read_api_keys_of_sim_providers(self):
         config_file = configparser.ConfigParser()
@@ -104,7 +106,7 @@ class BodyTelegramBot(AbstractFrame):
     def _check_register_amount(self, event):
         current_val = self._entry_register_account.get()
 
-        if len(current_val) > 3 and current_val.isnumeric():
+        if len(current_val) > 4 and current_val.isnumeric():
             self._entry_register_account.delete(len(current_val) - 1)
             tkmb.showerror(
                 "Maximum Account To Register",
@@ -195,6 +197,7 @@ class BodyTelegramBot(AbstractFrame):
                 sms_timeout=sms_timeout,
                 sms_after_code_op=self.var_sms_after_option.get(),
                 maximum_register=self._entry_register_account.get(),
+                proxy_enabled=self.var_proxy_enabled.get(),
             )
             self.frame_thread = self.frame_thread
             self.frame_thread.start()
