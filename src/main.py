@@ -10,6 +10,7 @@ from src.ui.abstract_frame_ui import AbstractTab
 from src.ui.add_users_ui import AddTgUsers
 from src.ui.auto_register import AutoRegisterTg
 from src.ui.header import Header
+from src.ui.info_update_ui import UpdateTgInfo
 from src.utils.logger import ConsoleUi, logger
 
 
@@ -35,7 +36,7 @@ class TelegramAccountCreator(tk.Tk):
             print("Not recognized platform. No icon will be set.")
             raise Exception("Not recognized platform.")
 
-        self.title("Telegram Auto Account v0.4.2 (telethon only)")
+        self.title("Telegram Auto Account v0.5.4 (telethon only)")
         self.tabs_in_main_page = ttk.Notebook(self)
         self.tabs_in_main_page.grid(row=1, column=0, sticky="nsew")
         self.header = Header(parent=self)
@@ -47,10 +48,12 @@ class TelegramAccountCreator(tk.Tk):
 
         auto_register_tg = AutoRegisterTg(self.tabs_in_main_page)
         add_tg_users = AddTgUsers(self.tabs_in_main_page)
+        update_tg_users = UpdateTgInfo(self.tabs_in_main_page)
 
         auto_register_tg.pack(fill=tk.BOTH, expand=True)
         self.tabs_in_main_page.add(auto_register_tg, text="Auto Register")
         self.tabs_in_main_page.add(add_tg_users, text="Add Users")
+        self.tabs_in_main_page.add(update_tg_users, text="Update Users Info")
 
         console = ConsoleUi(self)
         console.grid(row=2, column=0, sticky="nsew")
@@ -95,6 +98,15 @@ class TelegramAccountCreator(tk.Tk):
             with open(r"data\user.txt", "a") as fh:
                 fh.close()
 
+        if not os.path.exists(r"data\name_change.txt"):
+            with open(r"data\name_change.txt", "a") as fh:
+                fh.write("Victor ham")
+                fh.close()
+
+        if not os.path.exists(r"data\username_change.txt"):
+            with open(r"data\username_change.txt", "a") as fh:
+                fh.close()
+
         if not os.path.exists(r"sim_provider_config.ini"):
             with open(r"sim_provider_config.ini", "w") as fh:
                 config_file = configparser.ConfigParser()
@@ -105,6 +117,10 @@ class TelegramAccountCreator(tk.Tk):
 
         if not os.path.exists("sessions"):
             os.mkdir("sessions")
+
+        if not os.path.exists(r"sessions\phones.txt"):
+            with open(r"sessions\phones.txt", "a") as fh:
+                fh.close()
 
         if not os.path.exists("used_sessions"):
             os.mkdir("used_sessions")

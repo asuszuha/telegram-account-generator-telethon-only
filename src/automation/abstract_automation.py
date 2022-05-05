@@ -26,8 +26,34 @@ class AbstractAutomation(threading.Thread, abc.ABC):
 
     def write_list_to_file(self, filename: str, new_list: List[str]):
         new_list = [elem + "\n" for elem in new_list]  # type: ignore
+        if new_list:
+            new_list[-1] = new_list[-1].replace("\n", "")  # last element no new line
         with open(f"data\\{filename}.txt", "w") as fh:
             fh.writelines(new_list)
+
+    def write_list_to_file_with_path(self, path: str, filename: str, new_list: List[str]):
+        new_list = [elem + "\n" for elem in new_list]  # type: ignore
+        if new_list:
+            new_list[-1] = new_list[-1].replace("\n", "")  # last element no new line
+        with open(f"{path}\\{filename}.txt", "w") as fh:
+            fh.writelines(new_list)
+
+    def read_txt_proxy(self, proxy: str):
+        splitted_line = proxy.split(":")
+        proxy_dict = {}
+        proxy_dict["addr"] = splitted_line[0]
+        proxy_dict["port"] = int(splitted_line[1])
+        proxy_dict["username"] = splitted_line[2]
+        proxy_dict["password"] = splitted_line[3]
+        proxy_dict["proxy_type"] = "socks5"
+
+        return proxy_dict
+
+    def remove_current_picture(self, path_of_file: str):
+        try:
+            os.remove(path_of_file)
+        except Exception:
+            logger.exception(f"Cannot remove profile picture under path: {path_of_file}")
 
     @abc.abstractmethod
     def run(self):

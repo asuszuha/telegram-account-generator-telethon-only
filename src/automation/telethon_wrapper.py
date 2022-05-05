@@ -57,19 +57,27 @@ class TelethonWrapper:
             logger.info(f"Unknown error occured: {str(e)}")
             raise Exception(e)
 
-    def check_client_authorized(self, code_callback):
+    def check_client_authorized(self, code_callback=None):
         try:
             self.client_internal.connect()
             if not self.client_internal.is_user_authorized():
                 self.client_internal.send_code_request(self.phone)
-                self.client_internal.sign_in(self.phone, code=code_callback())
+                self.client_internal.sign_in(self.phone, code=code_callback() if code_callback else None)
+            if not self.client_internal.is_user_authorized():
+                return False
             return True
         except Exception as e:
             logger.exception(str(e))
             return False
 
     async def set_other_user_settings(
-        self, username: str, password: str, profile_image_path: str = None, about: str = None
+        self,
+        username: str = None,
+        password: str = None,
+        profile_image_path: str = None,
+        about: str = None,
+        first_name: str = None,
+        last_name: str = None,
     ):
         if profile_image_path:
             logger.info("Profile image will be added.")
@@ -79,9 +87,10 @@ class TelethonWrapper:
             logger.info("Profile image successfully added.")
 
         try:
-            logger.info(f"Trying to update username to {username}.")
-            await self.client_internal(UpdateUsernameRequest(username))
-            logger.info(f"Username updated to {username}")
+            if username:
+                logger.info(f"Trying to update username to {username}.")
+                await self.client_internal(UpdateUsernameRequest(username))
+                logger.info(f"Username updated to {username}")
         except Exception as e:
             logger.error(f"Cannot change username: {str(e)}")
 
@@ -98,6 +107,20 @@ class TelethonWrapper:
                 logger.info(f"About set to {about}")
         except Exception as e:
             logger.error(f"Cannot set about: {str(e)}")
+
+        try:
+            if first_name:
+                await self.client(UpdateProfileRequest(first_name=first_name))
+                logger.info(f"First name set to {first_name}")
+        except Exception as e:
+            logger.error(f"Cannot set first name: {str(e)}")
+
+        try:
+            if last_name:
+                await self.client(UpdateProfileRequest(last_name=last_name))
+                logger.info(f"Last name set to {last_name}")
+        except Exception as e:
+            logger.error(f"Cannot set last name: {str(e)}")
 
     @property
     def client(self) -> TelegramClient:

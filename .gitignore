@@ -136,3 +136,4 @@ data/
 output/
 sim_provider_config.ini
 used_sessions/
+test_sessions_for_auth/

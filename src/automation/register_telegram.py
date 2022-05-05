@@ -135,18 +135,8 @@ class RegisterTelegram(AbstractAutomation):
     def write_output_files(self):
         if self._number:
             with open(self.output_dir + r"\phones.txt", "a") as fh:
-                fh.write(str(self._phone_number + "\n"))
-
-    def read_txt_proxy(self, proxy: str):
-        splitted_line = proxy.split(":")
-        proxy_dict = {}
-        proxy_dict["addr"] = splitted_line[0]
-        proxy_dict["port"] = int(splitted_line[1])
-        proxy_dict["username"] = splitted_line[2]
-        proxy_dict["password"] = splitted_line[3]
-        proxy_dict["proxy_type"] = "socks5"
-
-        return proxy_dict
+                if self._phone_number:
+                    fh.write(str(self._phone_number + "\n"))
 
     def generate_username(self, name: str):
         removed_digits = "".join([elem for elem in name if not elem.isdigit()])
@@ -230,9 +220,12 @@ class RegisterTelegram(AbstractAutomation):
                     retry_count = 0
                     self.tw_instance = None
                     success = False
+                    self._phone_number = None
                     while retry_count < 5:
                         try:
                             self.get_number()
+                            if not self._phone_number:
+                                raise Exception("Unknown exception number not found.")
                             telegram_client = TelegramClient(
                                 rf"sessions\{self._phone_number}",
                                 api_id=current_tg_api_id,
