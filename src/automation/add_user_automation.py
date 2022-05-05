@@ -180,6 +180,9 @@ class AddUser(AbstractAutomation):
                                 self.proxies.remove(current_proxy)
                                 self.write_list_to_file("proxies", self.proxies)
                                 current_proxy = self.proxies[0]
+                                if self.tw_instance and self.tw_instance.client:
+                                    if self.tw_instance.client.is_connected():
+                                        self.tw_instance.client.disconnect()
                         finally:
                             retry_count += 1
 
@@ -239,7 +242,6 @@ class AddUser(AbstractAutomation):
                         current_proxy = self.proxies[0]
                         formatted_proxy = self.read_txt_proxy(current_proxy)  # type: ignore
                         logger.info(f"Proxy will be used: {formatted_proxy['addr']}")
-
                     retry_count = 0
                     while retry_count < 5:
                         try:
@@ -258,6 +260,7 @@ class AddUser(AbstractAutomation):
                             if not self.tw_instance.check_client_authorized():
                                 self.delete_unsuccessful_session(self.phone)
                                 raise ClientNotAuthorizedException("Client not authorized")
+                            break
                         except PossibleProxyIssueException:
                             if current_proxy and self.proxies:
                                 logger.info(

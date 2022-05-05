@@ -66,6 +66,9 @@ class TelethonWrapper:
             if not self.client_internal.is_user_authorized():
                 return False
             return True
+        except ConnectionError as ce:
+            logger.exception("Possibly issue with proxy. If you are using proxy it will be removed.")
+            raise PossibleProxyIssueException(str(ce))
         except Exception as e:
             logger.exception(str(e))
             return False

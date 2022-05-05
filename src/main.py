@@ -11,6 +11,7 @@ from src.ui.add_users_ui import AddTgUsers
 from src.ui.auto_register import AutoRegisterTg
 from src.ui.header import Header
 from src.ui.info_update_ui import UpdateTgInfo
+from src.utils import paths
 from src.utils.logger import ConsoleUi, logger
 
 
@@ -60,70 +61,55 @@ class TelegramAccountCreator(tk.Tk):
         logger.info("App starting")
 
     def initial_checks(self):
-        if not os.path.exists("data"):
-            os.mkdir("data")
+        # Create for auto register and add user
+        if not os.path.exists(paths.AUTO_REGISTER_PATH_DIR):
+            os.mkdir(paths.AUTO_REGISTER_PATH_DIR)
 
-        if not os.path.exists("profile_pics"):
-            os.mkdir("profile_pics")
+        for folder_name in paths.AUTO_REGISTER_SUBFOLDERS:
+            folder_name = paths.AUTO_REGISTER_PATH_DIR + "\\" + folder_name
+            if not os.path.exists(folder_name):
+                os.mkdir(folder_name)
 
-        if not os.path.exists(r"data\names.txt"):
-            with open(r"data\names.txt", "a") as fh:
-                fh.close()
+        for file_name in paths.AUTO_REGISTER_FILES:
+            file_name = paths.AUTO_REGISTER_PATH_DIR + "\\" + file_name
+            if not os.path.exists(file_name):
+                os.mkdir(file_name)
 
-        if not os.path.exists(r"data\devices.txt"):
-            with open(r"data\devices.txt", "a") as fh:
-                fh.close()
+        # Create for update info
+        if not os.path.exists(paths.USER_INFO_DIR):
+            os.mkdir(paths.USER_INFO_DIR)
 
-        if not os.path.exists(r"data\about.txt"):
-            with open(r"data\about.txt", "a") as fh:
-                fh.close()
+        for folder_name in paths.USER_INFO_SUBFOLDERS:
+            folder_name = paths.USER_INFO_DIR + "\\" + folder_name
+            if not os.path.exists(folder_name):
+                os.mkdir(folder_name)
 
-        if not os.path.exists(r"data\passwords.txt"):
-            with open(r"data\passwords.txt", "a") as fh:
-                fh.close()
+        for file_name in paths.USER_INFO_FILES:
+            file_name = paths.USER_INFO_DIR + "\\" + file_name
+            if not os.path.exists(file_name):
+                os.mkdir(file_name)
 
-        if not os.path.exists(r"data\proxies.txt"):
-            with open(r"data\proxies.txt", "a") as fh:
-                fh.close()
+        # Create for get manual number info
+        if not os.path.exists(paths.RETRIEVE_MANUAL_DIR):
+            os.mkdir(paths.RETRIEVE_MANUAL_DIR)
 
-        if not os.path.exists(r"data\api.txt"):
-            with open(r"data\api.txt", "a") as fh:
-                fh.close()
+        for folder_name in paths.RETRIEVE_MANUAL_SUBFOLDERS:
+            folder_name = paths.RETRIEVE_MANUAL_DIR + "\\" + folder_name
+            if not os.path.exists(folder_name):
+                os.mkdir(folder_name)
 
-        if not os.path.exists(r"data\groups.txt"):
-            with open(r"data\groups.txt", "a") as fh:
-                fh.close()
+        for file_name in paths.RETRIEVE_MANUAL_FILES:
+            file_name = paths.RETRIEVE_MANUAL_DIR + "\\" + file_name
+            if not os.path.exists(file_name):
+                os.mkdir(file_name)
 
-        if not os.path.exists(r"data\user.txt"):
-            with open(r"data\user.txt", "a") as fh:
-                fh.close()
-
-        if not os.path.exists(r"data\name_change.txt"):
-            with open(r"data\name_change.txt", "a") as fh:
-                fh.write("Victor ham")
-                fh.close()
-
-        if not os.path.exists(r"data\username_change.txt"):
-            with open(r"data\username_change.txt", "a") as fh:
-                fh.close()
-
-        if not os.path.exists(r"sim_provider_config.ini"):
-            with open(r"sim_provider_config.ini", "w") as fh:
+        if not os.path.exists(paths.AUTO_REGISTER_PATH_DIR + "\\sim_provider_config.ini"):
+            with open(paths.AUTO_REGISTER_PATH_DIR + "\\sim_provider_config.ini", "w") as fh:
                 config_file = configparser.ConfigParser()
                 config_file.add_section("SIMProviderAPIKeys")
                 config_file.set("SIMProviderAPIKeys", "5sim_api_key", "")
                 config_file.set("SIMProviderAPIKeys", "sms_activate_api_key", "")
                 config_file.write(fh)
-
-        if not os.path.exists("sessions"):
-            os.mkdir("sessions")
-
-        if not os.path.exists(r"sessions\phones.txt"):
-            with open(r"sessions\phones.txt", "a") as fh:
-                fh.close()
-
-        if not os.path.exists("used_sessions"):
-            os.mkdir("used_sessions")
 
     def run(self):
 
