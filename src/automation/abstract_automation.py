@@ -16,22 +16,15 @@ class AbstractAutomation(threading.Thread, abc.ABC):
         self._stop_event = threading.Event()
         self._prev_url = None
 
-    def read_file_with_property(self, filename: str):
-        if os.path.exists(f"data\\{filename}.txt"):
-            with open(f"data\\{filename}.txt", "r", encoding="utf-8") as fh:
+    def read_file_with_property(self, path: str, filename: str):
+        if os.path.exists(path + "\\" + filename + ".txt"):
+            with open(path + "\\" + filename + ".txt", "r", encoding="utf-8", errors="ignore") as fh:
                 return [line.replace("\n", "") for line in fh.readlines()]
         else:
             logger.exception(f"Please put {filename} file under data folder.")
             raise Exception("No names file detected!")
 
-    def write_list_to_file(self, filename: str, new_list: List[str]):
-        new_list = [elem + "\n" for elem in new_list]  # type: ignore
-        if new_list:
-            new_list[-1] = new_list[-1].replace("\n", "")  # last element no new line
-        with open(f"data\\{filename}.txt", "w") as fh:
-            fh.writelines(new_list)
-
-    def write_list_to_file_with_path(self, path: str, filename: str, new_list: List[str]):
+    def write_list_to_file(self, path: str, filename: str, new_list: List[str]):
         new_list = [elem + "\n" for elem in new_list]  # type: ignore
         if new_list:
             new_list[-1] = new_list[-1].replace("\n", "")  # last element no new line

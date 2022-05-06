@@ -8,6 +8,7 @@ from tkinter import Tk, simpledialog
 from telethon import TelegramClient
 
 from src.utils.logger import logger
+from src.utils.paths import USER_INFO_DIR
 
 from .abstract_automation import AbstractAutomation
 from .exceptions_automation import ClientNotAuthorizedException, NoTelegramApiInfoFoundException
@@ -26,11 +27,11 @@ class UpdateInfo(AbstractAutomation):
 
         self.client_mode = client_mode
         self.code_required = code_required
-        self.names_to_change = self.read_file_with_property("name_change")
-        self.username_to_change = self.read_file_with_property("username_change")
-        self.abouts = self.read_file_with_property("about")
-        self.apis = self.read_file_with_property("api")
-        self.profile_pics_path = "profile_pics"
+        self.names_to_change = self.read_file_with_property(path=USER_INFO_DIR, filename="names")
+        self.username_to_change = self.read_file_with_property(path=USER_INFO_DIR, filename="user")
+        self.abouts = self.read_file_with_property(path=USER_INFO_DIR, filename="about")
+        self.apis = self.read_file_with_property(path=USER_INFO_DIR, filename="api")
+        self.profile_pics_path = rf"{USER_INFO_DIR}\profile_pics"
         self._list_of_profile_pics_path = os.listdir(self.profile_pics_path)
         self.sessions = self.read_all_sessions()
         if self.client_mode == 1 and int(max_session):
@@ -41,12 +42,12 @@ class UpdateInfo(AbstractAutomation):
             self.phones = self.load_phone_numbers()
 
     def read_all_sessions(self):
-        sessions = glob.glob(r"sessions\*.session")
+        sessions = glob.glob(rf"{USER_INFO_DIR}\sessions\*.session")
         return sessions
 
     def load_phone_numbers(self):
         try:
-            with open(r"sessions\phones.txt", "r") as phone_file:
+            with open(rf"{USER_INFO_DIR}\sessions\phones.txt", "r") as phone_file:
                 phone_list = phone_file.read().split("\n")
                 logger.info(f"Got {str(len(phone_list))} phone number")
                 return phone_list
@@ -74,17 +75,22 @@ class UpdateInfo(AbstractAutomation):
     def delete_unsuccessful_session(self, phone: str):
         if self.tw_instance and self.tw_instance.client:
             self.tw_instance.client.disconnect()
-            if os.path.isfile(f"sessions\\{phone}.session"):
-                os.remove(f"sessions\\{phone}.session")
+            if os.path.isfile(f"{USER_INFO_DIR}\\sessions\\{phone}.session"):
+                os.remove(f"{USER_INFO_DIR}\\sessions\\{phone}.session")
 
     def move_current_session(self, client: TelegramClient):
         if client.is_connected():
             phone = client.get_me().phone
             client.disconnect()
-            session = rf"sessions\+{phone}.session"
-            session_filename = session.split("\\")[1]
+
+            session = rf"{USER_INFO_DIR}\sessions\+{phone}.session"
+            if not os.path.exists(session):
+                session = rf"{USER_INFO_DIR}\sessions\{phone}.session"
+            session_filename = session.split("\\")[-1]
             if os.path.exists(session):
-                shutil.move(session, rf"used_sessions\{session_filename}")
+                shutil.move(session, rf"{USER_INFO_DIR}\used_sessions\{session_filename}")
+            else:
+                raise Exception(f"Session file not found {session}. So it cannot be moved.")
 
     def update_info_session_based(self):
         for session in self.sessions:
@@ -95,7 +101,7 @@ class UpdateInfo(AbstractAutomation):
                     self.running = False
                     break
                 try:
-                    self.phone = session.split("\\")[1].replace(".session", "")
+                    self.phone = session.split("\\")[-1].replace(".session", "")
                     logger.info(f"Starting updating info of number {self.phone}")
 
                     current_tg_api_id = None
@@ -169,17 +175,17 @@ class UpdateInfo(AbstractAutomation):
                     # Remove about
                     if current_about and self.abouts:
                         self.abouts.remove(current_about)
-                        self.write_list_to_file("about", self.abouts)
+                        self.write_list_to_file(path=USER_INFO_DIR, filename="about", new_list=self.abouts)
 
                     # Remove username
                     if current_username and self.username_to_change:
                         self.username_to_change.remove(self.username_to_change[0])
-                        self.write_list_to_file("username_change", self.username_to_change)
+                        self.write_list_to_file(path=USER_INFO_DIR, filename="user", new_list=self.username_to_change)
 
                     # Remove name
                     if current_name and self.names_to_change:
                         self.names_to_change.remove(self.names_to_change[0])
-                        self.write_list_to_file("name_change", self.names_to_change)
+                        self.write_list_to_file(path=USER_INFO_DIR, filename="names", new_list=self.names_to_change)
 
                 except NoTelegramApiInfoFoundException as e:
                     tkmb.showerror("Error Occured", "No telegram api info found.")
@@ -235,7 +241,7 @@ class UpdateInfo(AbstractAutomation):
                         logger.info(f"Username: {current_username}")
 
                     telegram_client = TelegramClient(
-                        session=rf"sessions\{self.phone}",
+                        session=rf"{USER_INFO_DIR}\sessions\{self.phone}",
                         api_id=current_tg_api_id,
                         api_hash=current_tg_hash,
                         base_logger=logger,
@@ -278,21 +284,23 @@ class UpdateInfo(AbstractAutomation):
                     # Remove about
                     if current_about and self.abouts:
                         self.abouts.remove(current_about)
-                        self.write_list_to_file("about", self.abouts)
+                        self.write_list_to_file(path=USER_INFO_DIR, filename="about", new_list=self.abouts)
 
                     # Remove username
                     if current_username and self.username_to_change:
-                        self.username_to_change.remove(current_username)
-                        self.write_list_to_file("username_change", self.username_to_change)
+                        self.username_to_change.remove(self.username_to_change[0])
+                        self.write_list_to_file(path=USER_INFO_DIR, filename="user", new_list=self.username_to_change)
 
                     # Remove name
                     if current_name and self.names_to_change:
-                        self.names_to_change.remove(current_name)
-                        self.write_list_to_file("name_change", self.names_to_change)
+                        self.names_to_change.remove(self.names_to_change[0])
+                        self.write_list_to_file(path=USER_INFO_DIR, filename="names", new_list=self.names_to_change)
 
                     # Remove phones
                     self.phones_copy.remove(phone)
-                    self.write_list_to_file_with_path(path="sessions", filename="phones", new_list=self.phones_copy)
+                    self.write_list_to_file(
+                        path=rf"{USER_INFO_DIR}\sessions", filename="phones", new_list=self.phones_copy
+                    )
 
                 except NoTelegramApiInfoFoundException as e:
                     if self.tw_instance and self.tw_instance.client.is_connected():
@@ -301,7 +309,9 @@ class UpdateInfo(AbstractAutomation):
                     raise e
                 except Exception as e:
                     self.phones_copy.remove(phone)
-                    self.write_list_to_file_with_path(path="sessions", filename="phones", new_list=self.phones_copy)
+                    self.write_list_to_file(
+                        path=rf"{USER_INFO_DIR}\sessions", filename="phones", new_list=self.phones_copy
+                    )
                     self.delete_unsuccessful_session(phone)
 
                     logger.info(f"Exception occured with {str(e)}")

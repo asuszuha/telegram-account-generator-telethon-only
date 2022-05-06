@@ -4,6 +4,7 @@ import tkinter.messagebox as tkmb
 from tkinter import IntVar, ttk
 
 from src.automation.update_info_automation import UpdateInfo
+from src.utils.paths import USER_INFO_DIR
 
 from .abstract_frame_ui import AbstractTab
 
@@ -88,12 +89,12 @@ class UpdateTgInfo(AbstractTab):
 
     def run(self):
         if self.var_update_info_user_from.get() == 0:
-            phones_exists = os.path.exists(r"sessions\phones.txt")
+            phones_exists = os.path.exists(rf"{USER_INFO_DIR}\sessions\phones.txt")
             if not phones_exists:
                 tkmb.showerror("No phones.txt", "No phones.txt found under sessions folder.")
                 return
         else:
-            sessions_exists = glob.glob(r"sessions\*.session")
+            sessions_exists = glob.glob(rf"{USER_INFO_DIR}\sessions\*.session")
             if not sessions_exists:
                 tkmb.showerror("No sessions found", "No session file found under sessions folder.")
                 return

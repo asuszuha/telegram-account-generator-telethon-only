@@ -16,6 +16,7 @@ from telethon.tl.types import ChannelParticipantsSearch, InputChannel, InputPeer
 
 from src.automation.telethon_wrapper import PossibleProxyIssueException, TelethonWrapper
 from src.utils.logger import logger
+from src.utils.paths import AUTO_REGISTER_PATH_DIR
 
 from .abstract_automation import AbstractAutomation
 from .exceptions_automation import (
@@ -40,8 +41,8 @@ class AddUser(AbstractAutomation):
 
         self.run_mode = run_mode
         self.client_mode = client_mode
-        self.groups = self.read_file_with_property("groups")
-        self.apis = self.read_file_with_property("api")
+        self.groups = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="groups")
+        self.apis = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="api")
         self.sessions = self.read_all_sessions()
         self.code_required = code_required
         if self.client_mode == 1 and int(max_session):
@@ -51,19 +52,19 @@ class AddUser(AbstractAutomation):
         if self.client_mode == 0:
             self.phones = self.load_phone_numbers()
 
-        self.user_delay = int(user_delay)
+        self.user_delay = float(user_delay)
         if proxy_enabled:
-            self.proxies = self.read_file_with_property("proxies")
+            self.proxies = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="proxies")
         else:
             self.proxies = []
 
     def read_all_sessions(self):
-        sessions = glob.glob(r"sessions\*.session")
+        sessions = glob.glob(rf"{AUTO_REGISTER_PATH_DIR}\sessions\*.session")
         return sessions
 
     def load_phone_numbers(self):
         try:
-            with open(r"sessions\phones.txt", "r") as phone_file:
+            with open(rf"{AUTO_REGISTER_PATH_DIR}\sessions\phones.txt", "r") as phone_file:
                 phone_list = phone_file.read().split("\n")
                 logger.info(f"Got {str(len(phone_list))} phone number")
                 return phone_list
@@ -151,7 +152,7 @@ class AddUser(AbstractAutomation):
                     while retry_count < 5:
                         try:
                             telegram_client = TelegramClient(
-                                rf"sessions\{phone}",
+                                rf"{AUTO_REGISTER_PATH_DIR}\sessions\{phone}",
                                 api_id=current_tg_api_id,
                                 api_hash=current_tg_hash,
                                 base_logger=logger,
@@ -165,10 +166,13 @@ class AddUser(AbstractAutomation):
                                 if not self.tw_instance.check_client_authorized(
                                     code_callback=self.code_callback_manual
                                 ):
+                                    self.delete_unsuccessful_session(self.phone)
                                     raise ClientNotAuthorizedException("Client not authorized")
                             else:
                                 if not self.tw_instance.check_client_authorized(code_callback=None):
+                                    self.delete_unsuccessful_session(self.phone)
                                     raise ClientNotAuthorizedException("Client not authorized")
+                            break
                         except PossibleProxyIssueException:
                             if current_proxy and self.proxies:
                                 logger.info(
@@ -178,7 +182,9 @@ class AddUser(AbstractAutomation):
                                     )
                                 )
                                 self.proxies.remove(current_proxy)
-                                self.write_list_to_file("proxies", self.proxies)
+                                self.write_list_to_file(
+                                    path=AUTO_REGISTER_PATH_DIR, filename="proxies", new_list=self.proxies
+                                )
                                 current_proxy = self.proxies[0]
                                 if self.tw_instance and self.tw_instance.client:
                                     if self.tw_instance.client.is_connected():
@@ -190,20 +196,24 @@ class AddUser(AbstractAutomation):
 
                     # Remove api
                     self.apis.remove(self.apis[0])
-                    self.write_list_to_file("api", self.apis)
+                    self.write_list_to_file(path=AUTO_REGISTER_PATH_DIR, filename="api", new_list=self.apis)
 
                     # Remove proxy
                     if current_proxy and self.proxies:
                         self.proxies.remove(current_proxy)
-                        self.write_list_to_file("proxies", self.proxies)
+                        self.write_list_to_file(path=AUTO_REGISTER_PATH_DIR, filename="proxies", new_list=self.proxies)
                 except NoTelegramApiInfoFoundAddUserException as e:
-                    self.write_list_to_file_with_path(path="sessions", filename="phones", new_list=self.phones_copy)
+                    self.write_list_to_file(
+                        path=rf"{AUTO_REGISTER_PATH_DIR}\sessions", filename="phones", new_list=self.phones_copy
+                    )
                     tkmb.showerror("Error Occured", "No telegram api info found.")
                     raise e
                 except Exception as e:
                     # Clean up
                     self.phones_copy.remove(phone)
-                    self.write_list_to_file_with_path(path="sessions", filename="phones", new_list=self.phones_copy)
+                    self.write_list_to_file(
+                        path=rf"{AUTO_REGISTER_PATH_DIR}\sessions", filename="phones", new_list=self.phones_copy
+                    )
                     self.delete_unsuccessful_session(phone)
                     logger.exception(f"Exception occured with {str(e)}")
 
@@ -225,7 +235,7 @@ class AddUser(AbstractAutomation):
 
                 try:
                     # Move session
-                    self.phone = session.split("\\")[1].replace(".session", "")
+                    self.phone = session.split("\\")[-1].replace(".session", "")
                     current_tg_api_id = None
                     current_tg_hash = None
                     if self.apis:
@@ -270,8 +280,16 @@ class AddUser(AbstractAutomation):
                                     )
                                 )
                                 self.proxies.remove(current_proxy)
-                                self.write_list_to_file("proxies", self.proxies)
+                                self.write_list_to_file(
+                                    path=AUTO_REGISTER_PATH_DIR, filename="proxies", new_list=self.proxies
+                                )
                                 current_proxy = self.proxies[0]
+                                if (
+                                    self.tw_instance
+                                    and self.tw_instance.client
+                                    and self.tw_instance.client.is_connected()
+                                ):
+                                    self.tw_instance.client.disconnect()
                         finally:
                             retry_count += 1
 
@@ -279,12 +297,12 @@ class AddUser(AbstractAutomation):
 
                     # Remove api
                     self.apis.remove(self.apis[0])
-                    self.write_list_to_file("api", self.apis)
+                    self.write_list_to_file(path=AUTO_REGISTER_PATH_DIR, filename="api", new_list=self.apis)
 
                     # Remove proxy
                     if current_proxy and self.proxies:
                         self.proxies.remove(current_proxy)
-                        self.write_list_to_file("proxies", self.proxies)
+                        self.write_list_to_file(path=AUTO_REGISTER_PATH_DIR, filename="proxies", new_list=self.proxies)
                 except NoTelegramApiInfoFoundAddUserException as e:
                     tkmb.showerror("Error Occured", "No telegram api info found.")
                     raise e
@@ -296,8 +314,8 @@ class AddUser(AbstractAutomation):
     def delete_unsuccessful_session(self, phone: str):
         if self.tw_instance and self.tw_instance.client:
             self.tw_instance.client.disconnect()
-            if os.path.isfile(f"sessions\\{phone}.session"):
-                os.remove(f"sessions\\{phone}.session")
+            if os.path.isfile(f"{AUTO_REGISTER_PATH_DIR}\\sessions\\{phone}.session"):
+                os.remove(f"{AUTO_REGISTER_PATH_DIR}\\sessions\\{phone}.session")
 
     def get_necessary_info(self, client: TelegramClient):
         chats = []
@@ -439,7 +457,7 @@ class AddUser(AbstractAutomation):
 
             try:
                 logger.info("Saving user list...")
-                with open(r"data\user.txt", "w+", encoding="utf-8") as f:
+                with open(rf"{AUTO_REGISTER_PATH_DIR}\user.txt", "w+", encoding="utf-8", errors="ignore") as f:
                     for item in groups_participants[0]:
                         if item.username is not None:
                             f.write("%s\n" % (item.username))
@@ -453,10 +471,15 @@ class AddUser(AbstractAutomation):
         if client.is_connected():
             phone = client.get_me().phone
             client.disconnect()
-            session = rf"sessions\+{phone}.session"
-            session_filename = session.split("\\")[1]
+
+            session = rf"{AUTO_REGISTER_PATH_DIR}\sessions\+{phone}.session"
+            if not os.path.exists(session):
+                session = rf"{AUTO_REGISTER_PATH_DIR}\sessions\{phone}.session"
+            session_filename = session.split("\\")[-1]
             if os.path.exists(session):
-                shutil.move(session, rf"used_sessions\{session_filename}")
+                shutil.move(session, rf"{AUTO_REGISTER_PATH_DIR}\used_sessions\{session_filename}")
+            else:
+                raise Exception(f"Session file not found {session}. So it cannot be moved.")
 
     def add_users_to_groups(self, clients: List[TelegramClient]):
         peer_flooded = []
@@ -467,7 +490,7 @@ class AddUser(AbstractAutomation):
         print("List of groups:")
         ii = 0
         userlist = []
-        with open(r"data\user.txt", "r", encoding="utf-8") as f:
+        with open(rf"{AUTO_REGISTER_PATH_DIR}\user.txt", "r", encoding="utf-8", errors="ignore") as f:
             _temp = f.read()
             userlist = _temp.split("\n")
             userlist = userlist[:-1]
@@ -491,7 +514,7 @@ class AddUser(AbstractAutomation):
                             [__user],
                         )
                     )
-                    with open(r"data\user.txt", "w+", encoding="utf-8") as f:
+                    with open(rf"{AUTO_REGISTER_PATH_DIR}\user.txt", "w+", encoding="utf-8", errors="ignore") as f:
                         for item in userlist[index:]:
                             f.write("%s\n" % (item))
                         for pf in peer_flooded:
@@ -502,6 +525,7 @@ class AddUser(AbstractAutomation):
                     other_exceptions = []
                     time.sleep(self.user_delay)
                 except Exception as e:
+                    time.sleep(self.user_delay)
                     if "PEER_FLOOD" in str(e):
                         peer_flooded.append(user)
                         if len(peer_flooded) > 7:
@@ -531,10 +555,12 @@ class AddUser(AbstractAutomation):
                                 self.disconnect_all_clients(clients=clients)
                                 exit()
                     elif "privacy" in str(e):
-                        with open(r"data\user.txt", "w+", encoding="utf-8") as f:
+                        with open(rf"{AUTO_REGISTER_PATH_DIR}\user.txt", "w+", encoding="utf-8", errors="ignore") as f:
                             for item in userlist[index:]:
                                 f.write("%s\n" % (item))
+                        time.sleep(self.user_delay)
                     elif "Too many requests" in str(e):
+                        time.sleep(self.user_delay)
                         too_many_request.append(user)
                         if len(too_many_request) > 7:
                             if ii < len(clients) - 1:
@@ -563,6 +589,7 @@ class AddUser(AbstractAutomation):
                                 self.disconnect_all_clients(clients=clients)
                                 exit()
                     elif "wait" in str(e):
+                        time.sleep(self.user_delay)
                         wait_seconds.append(user)
                         if len(wait_seconds) > 7:
                             if ii < len(clients) - 1:
@@ -591,6 +618,7 @@ class AddUser(AbstractAutomation):
                                 logger.info("all accounts wait seconds is required")
                                 exit()
                     elif "privacy" not in str(e):
+                        time.sleep(self.user_delay)
                         other_exceptions.append(user)
                         if len(other_exceptions) > 7:
                             if ii < len(clients) - 1:
@@ -619,6 +647,7 @@ class AddUser(AbstractAutomation):
                                 logger.info("all accounts other error occurs")
                                 exit()
                     elif "Keyboard" in str(e):
+                        time.sleep(self.user_delay)
                         if ii < len(clients) - 1:
                             if self.client_mode:
                                 try:

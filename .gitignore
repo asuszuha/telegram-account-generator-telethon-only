@@ -137,3 +137,6 @@ output/
 sim_provider_config.ini
 used_sessions/
 test_sessions_for_auth/
+auto_register_and_add_user_data/
+change_user_info_data/
+retrieve_manual_code_data/

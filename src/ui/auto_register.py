@@ -8,6 +8,7 @@ from idlelib.tooltip import Hovertip
 from src.automation.register_telegram import RegisterTelegram
 from src.ui.abstract_frame_ui import AbstractTab
 from src.ui.generic_styles import set_cbox_attributes
+from src.utils.paths import AUTO_REGISTER_PATH_DIR
 from src.utils.sim5_net import Sim5Net
 from src.utils.sms_activate import SmsActivate, SmsActivateException
 
@@ -87,7 +88,7 @@ class AutoRegisterTg(AbstractTab):
 
     def read_api_keys_of_sim_providers(self):
         config_file = configparser.ConfigParser()
-        config_file.read("sim_provider_config.ini")
+        config_file.read(rf"{AUTO_REGISTER_PATH_DIR}\sim_provider_config.ini")
         sim_5_api_key = config_file["SIMProviderAPIKeys"]["5sim_api_key"]
         sms_activate_api_key = config_file["SIMProviderAPIKeys"]["sms_activate_api_key"]
         return sim_5_api_key, sms_activate_api_key

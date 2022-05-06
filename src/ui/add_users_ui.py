@@ -4,6 +4,7 @@ import tkinter.messagebox as tkmb
 from tkinter import IntVar, ttk
 
 from src.automation.add_user_automation import AddUser
+from src.utils.paths import AUTO_REGISTER_PATH_DIR
 
 from .abstract_frame_ui import AbstractTab
 
@@ -77,7 +78,7 @@ class AddTgUsers(AbstractTab):
 
         lbl_delay_for_user = ttk.LabelFrame(self, text="Additional Settings")
         lbl_user_delay = ttk.Label(lbl_delay_for_user, text="User Adding Delay (seconds):")
-        self._spb_delay_for_adding = ttk.Spinbox(lbl_delay_for_user, from_=0, to=999)
+        self._spb_delay_for_adding = ttk.Spinbox(lbl_delay_for_user, from_=0, to=999, increment=0.1)
         self._spb_delay_for_adding.bind("<KeyRelease>", self._check_user_delay)
 
         lbl_delay_for_user.grid(row=3, column=1, sticky="we", padx=(5, 5))
@@ -88,14 +89,33 @@ class AddTgUsers(AbstractTab):
         _chb_proxy_enabled = ttk.Checkbutton(lbl_delay_for_user, text="Enable proxy", variable=self.var_proxy_enabled)
         _chb_proxy_enabled.grid(row=4, column=1, sticky="w", padx=(5, 5))
 
+    def isfloat(self, num):
+        try:
+            float(num)
+            return True
+        except ValueError:
+            return False
+
     def _check_user_delay(self, event):
         current_val = self._spb_delay_for_adding.get()
 
-        if len(current_val) > 3 and current_val.isnumeric():
-            self._spb_delay_for_adding.delete(len(current_val) - 1)
-            tkmb.showerror("Maximum Timeout", "Maximum timeout is 999 seconds.")
+        if len(current_val) > 3 and self.isfloat(current_val):
+            if current_val.count(".") == 1:
+                integer_part = current_val.split(".")[0]
+                if len(integer_part) > 3:
+                    self._spb_delay_for_adding.delete(len(current_val) - 1)
+                    tkmb.showerror("Maximum Timeout", "Maximum timeout is 999.99 seconds.")
+            else:
+                self._spb_delay_for_adding.delete(len(current_val) - 1)
+                tkmb.showerror("Maximum Timeout", "Maximum timeout is 999.99 seconds.")
 
-        if not current_val.isnumeric() and len(current_val) > 0:
+        if self.isfloat(current_val) and current_val.count(".") == 1:
+            decimal_part = current_val.split(".")[1]
+            if len(decimal_part) > 2 and decimal_part.isnumeric():
+                self._spb_delay_for_adding.delete(len(current_val) - 1)
+                tkmb.showerror("Maximum Timeout", "Maximum timeout is 999.99 seconds.")
+
+        if not self.isfloat(current_val) and len(current_val) > 0 and current_val.count(".") > 1:
             self._spb_delay_for_adding.delete(len(current_val) - 1)
             tkmb.showerror("Not Numeric", "Please enter only numbers.")
 
@@ -121,12 +141,12 @@ class AddTgUsers(AbstractTab):
 
     def run(self):
         if self.var_add_user_from.get() == 0:
-            phones_exists = os.path.exists(r"sessions\phones.txt")
+            phones_exists = os.path.exists(rf"{AUTO_REGISTER_PATH_DIR}\sessions\phones.txt")
             if not phones_exists:
                 tkmb.showerror("No phones.txt", "No phones.txt found under sessions folder.")
                 return
         else:
-            sessions_exists = glob.glob(r"sessions\*.session*")
+            sessions_exists = glob.glob(rf"{AUTO_REGISTER_PATH_DIR}\sessions\*.session*")
             if not sessions_exists:
                 tkmb.showerror("No sessions found", "No session file found under sessions folder.")
                 return

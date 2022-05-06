@@ -37,7 +37,7 @@ class TelegramAccountCreator(tk.Tk):
             print("Not recognized platform. No icon will be set.")
             raise Exception("Not recognized platform.")
 
-        self.title("Telegram Auto Account v0.5.4 (telethon only)")
+        self.title("Telegram Auto Account v0.5.9 (telethon only)")
         self.tabs_in_main_page = ttk.Notebook(self)
         self.tabs_in_main_page.grid(row=1, column=0, sticky="nsew")
         self.header = Header(parent=self)
@@ -73,7 +73,8 @@ class TelegramAccountCreator(tk.Tk):
         for file_name in paths.AUTO_REGISTER_FILES:
             file_name = paths.AUTO_REGISTER_PATH_DIR + "\\" + file_name
             if not os.path.exists(file_name):
-                os.mkdir(file_name)
+                with open(file_name, "a") as fh:
+                    fh.close()
 
         # Create for update info
         if not os.path.exists(paths.USER_INFO_DIR):
@@ -87,7 +88,8 @@ class TelegramAccountCreator(tk.Tk):
         for file_name in paths.USER_INFO_FILES:
             file_name = paths.USER_INFO_DIR + "\\" + file_name
             if not os.path.exists(file_name):
-                os.mkdir(file_name)
+                with open(file_name, "a") as fh:
+                    fh.close()
 
         # Create for get manual number info
         if not os.path.exists(paths.RETRIEVE_MANUAL_DIR):
@@ -100,8 +102,10 @@ class TelegramAccountCreator(tk.Tk):
 
         for file_name in paths.RETRIEVE_MANUAL_FILES:
             file_name = paths.RETRIEVE_MANUAL_DIR + "\\" + file_name
+
             if not os.path.exists(file_name):
-                os.mkdir(file_name)
+                with open(file_name, "a") as fh:
+                    fh.close()
 
         if not os.path.exists(paths.AUTO_REGISTER_PATH_DIR + "\\sim_provider_config.ini"):
             with open(paths.AUTO_REGISTER_PATH_DIR + "\\sim_provider_config.ini", "w") as fh:

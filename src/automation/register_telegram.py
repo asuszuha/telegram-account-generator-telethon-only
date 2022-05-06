@@ -14,6 +14,7 @@ from src.automation.exceptions_automation import (
     RegisterTelegramException,
 )
 from src.utils.logger import logger
+from src.utils.paths import AUTO_REGISTER_PATH_DIR
 from src.utils.sim5_net import NoFreePhoneException, PurchaseNotPossibleException, Sim5Net
 from src.utils.sms_activate import NoNumbersException, SmsActivate
 
@@ -37,17 +38,17 @@ class RegisterTelegram(AbstractAutomation):
         self.country = country
 
         # Init from files
-        self.names = self.read_file_with_property("names")
-        self.devices = self.read_file_with_property("devices")
+        self.names = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="names")
+        self.devices = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="devices")
         if proxy_enabled:
-            self.proxies = self.read_file_with_property("proxies")
+            self.proxies = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="proxies")
         else:
             self.proxies = []
-        self.abouts = self.read_file_with_property("about")
-        self.passwords = self.read_file_with_property("passwords")
-        self.apis = self.read_file_with_property("api")
-        self.output_dir = "sessions"
-        self.profile_pics_path = "profile_pics"
+        self.abouts = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="about")
+        self.passwords = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="passwords")
+        self.apis = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="api")
+        self.output_dir = AUTO_REGISTER_PATH_DIR + "\\" + "sessions"
+        self.profile_pics_path = AUTO_REGISTER_PATH_DIR + "\\" + "profile_pics"
         self._list_of_profile_pics_path = os.listdir(self.profile_pics_path)
         self.sms_timeout = int(sms_timeout)
         self.sms_after_code_op = 6 if sms_after_code_op == "cancel" else None
@@ -147,8 +148,8 @@ class RegisterTelegram(AbstractAutomation):
             if self.tw_instance and self.tw_instance.client:
                 self.tw_instance.client.disconnect()
             if self._phone_number:
-                if os.path.isfile(f"sessions\\{self._phone_number}.session"):
-                    os.remove(f"sessions\\{self._phone_number}.session")
+                if os.path.isfile(f"{AUTO_REGISTER_PATH_DIR}\\sessions\\{self._phone_number}.session"):
+                    os.remove(f"{AUTO_REGISTER_PATH_DIR}\\sessions\\{self._phone_number}.session")
 
     def run(self):
         self.names_copy = self.names.copy()
@@ -227,7 +228,7 @@ class RegisterTelegram(AbstractAutomation):
                             if not self._phone_number:
                                 raise Exception("Unknown exception number not found.")
                             telegram_client = TelegramClient(
-                                rf"sessions\{self._phone_number}",
+                                rf"{AUTO_REGISTER_PATH_DIR}\sessions\{self._phone_number}",
                                 api_id=current_tg_api_id,
                                 api_hash=current_tg_hash,
                                 device_model=device if device else platform.uname().machine,
@@ -293,7 +294,9 @@ class RegisterTelegram(AbstractAutomation):
                                     )
                                 )
                                 self.proxies.remove(current_proxy)
-                                self.write_list_to_file("proxies", self.proxies)
+                                self.write_list_to_file(
+                                    path=AUTO_REGISTER_PATH_DIR, filename="proxies", new_list=self.proxies
+                                )
                                 current_proxy = self.proxies[0]
                         except Exception as e:
                             logger.info(f"Unknown exception {str(e)}.")
@@ -341,7 +344,7 @@ class RegisterTelegram(AbstractAutomation):
 
                     # Clean up
                     self.names_copy.remove(name)
-                    self.write_list_to_file("names", self.names_copy)
+                    self.write_list_to_file(path=AUTO_REGISTER_PATH_DIR, filename="names", new_list=self.names_copy)
 
                     # Remove image
                     if current_image and self._list_of_profile_pics_path:
@@ -351,26 +354,28 @@ class RegisterTelegram(AbstractAutomation):
                     # Remove password
                     if current_password and self.passwords:
                         self.passwords.remove(current_password)
-                        self.write_list_to_file("passwords", self.passwords)
+                        self.write_list_to_file(
+                            path=AUTO_REGISTER_PATH_DIR, filename="passwords", new_list=self.passwords
+                        )
 
                     # Remove about
                     if current_about and self.abouts:
                         self.abouts.remove(current_about)
-                        self.write_list_to_file("about", self.abouts)
+                        self.write_list_to_file(path=AUTO_REGISTER_PATH_DIR, filename="about", new_list=self.abouts)
 
                     # Remove proxy
                     if current_proxy and self.proxies:
                         self.proxies.remove(current_proxy)
-                        self.write_list_to_file("proxies", self.proxies)
+                        self.write_list_to_file(path=AUTO_REGISTER_PATH_DIR, filename="proxies", new_list=self.proxies)
 
                     # Remove device
                     if device and self.devices:
                         self.devices.remove(device)
-                        self.write_list_to_file("devices", self.devices)
+                        self.write_list_to_file(path=AUTO_REGISTER_PATH_DIR, filename="devices", new_list=self.devices)
 
                     # Remove api info
                     self.apis.remove(self.apis[0])
-                    self.write_list_to_file("api", self.apis)
+                    self.write_list_to_file(path=AUTO_REGISTER_PATH_DIR, filename="api", new_list=self.apis)
 
                     self.write_output_files()
                     registration_counter += 1
