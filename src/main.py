@@ -11,6 +11,7 @@ from src.ui.add_users_ui import AddTgUsers
 from src.ui.auto_register import AutoRegisterTg
 from src.ui.header import Header
 from src.ui.info_update_ui import UpdateTgInfo
+from src.ui.manual_code_ui import ManualTgCode
 from src.utils import paths
 from src.utils.logger import ConsoleUi, logger
 
@@ -50,11 +51,13 @@ class TelegramAccountCreator(tk.Tk):
         auto_register_tg = AutoRegisterTg(self.tabs_in_main_page)
         add_tg_users = AddTgUsers(self.tabs_in_main_page)
         update_tg_users = UpdateTgInfo(self.tabs_in_main_page)
+        manual_tg_code = ManualTgCode(self.tabs_in_main_page)
 
         auto_register_tg.pack(fill=tk.BOTH, expand=True)
         self.tabs_in_main_page.add(auto_register_tg, text="Auto Register")
         self.tabs_in_main_page.add(add_tg_users, text="Add Users")
         self.tabs_in_main_page.add(update_tg_users, text="Update Users Info")
+        self.tabs_in_main_page.add(manual_tg_code, text="Retrieve Code Manual")
 
         console = ConsoleUi(self)
         console.grid(row=2, column=0, sticky="nsew")

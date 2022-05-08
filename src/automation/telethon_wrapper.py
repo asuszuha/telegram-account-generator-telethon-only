@@ -125,6 +125,17 @@ class TelethonWrapper:
         except Exception as e:
             logger.error(f"Cannot set last name: {str(e)}")
 
+    def retrieve_code(self):
+        if not self.client_internal.is_connected():
+            self.client_internal.connect()
+        code = None
+        for chat in self.client_internal.iter_dialogs():
+            if "telegram" in chat.title.lower():
+                for message in self.client_internal.iter_messages(chat.id):
+                    if "login code" in message.message.lower():
+                        code = message.message.split(":")[1].split(".")[0].strip()
+                        return code
+
     @property
     def client(self) -> TelegramClient:
         return self.client_internal
