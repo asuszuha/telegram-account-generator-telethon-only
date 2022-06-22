@@ -4,6 +4,7 @@ from enum import Enum
 from tkinter import IntVar, StringVar, ttk
 
 from idlelib.tooltip import Hovertip
+from tkcalendar import DateEntry
 
 from src.automation.register_telegram import RegisterTelegram
 from src.ui.abstract_frame_ui import AbstractTab

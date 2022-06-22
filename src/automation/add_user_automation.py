@@ -1,5 +1,4 @@
 import asyncio
-import glob
 import os
 import shutil
 import time
@@ -43,7 +42,7 @@ class AddUser(AbstractAutomation):
         self.client_mode = client_mode
         self.groups = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="groups")
         self.apis = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="api")
-        self.sessions = self.read_all_sessions()
+        self.sessions = self.read_all_sessions(path=AUTO_REGISTER_PATH_DIR)
         self.code_required = code_required
         if self.client_mode == 1 and int(max_session):
             self.max_sessions = int(max_session)
@@ -57,10 +56,6 @@ class AddUser(AbstractAutomation):
             self.proxies = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="proxies")
         else:
             self.proxies = []
-
-    def read_all_sessions(self):
-        sessions = glob.glob(rf"{AUTO_REGISTER_PATH_DIR}\sessions\*.session")
-        return sessions
 
     def load_phone_numbers(self):
         try:

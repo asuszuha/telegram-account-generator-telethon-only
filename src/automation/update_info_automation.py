@@ -33,17 +33,13 @@ class UpdateInfo(AbstractAutomation):
         self.apis = self.read_file_with_property(path=USER_INFO_DIR, filename="api")
         self.profile_pics_path = rf"{USER_INFO_DIR}\profile_pics"
         self._list_of_profile_pics_path = os.listdir(self.profile_pics_path)
-        self.sessions = self.read_all_sessions()
+        self.sessions = self.read_all_sessions(path=USER_INFO_DIR)
         if self.client_mode == 1 and int(max_session):
             self.max_sessions = int(max_session)
             self.sessions = self.sessions[: self.max_sessions]
 
         if self.client_mode == 0:
             self.phones = self.load_phone_numbers()
-
-    def read_all_sessions(self):
-        sessions = glob.glob(rf"{USER_INFO_DIR}\sessions\*.session")
-        return sessions
 
     def load_phone_numbers(self):
         try:

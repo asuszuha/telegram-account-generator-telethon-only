@@ -24,3 +24,7 @@ class NoTelegramApiInfoFoundAddUserException(AddUserException):
 
 class ClientNotAuthorizedException(AddUserException):
     pass
+
+
+class PhoneNumberAndFileNameDifferentException(Exception):
+    pass

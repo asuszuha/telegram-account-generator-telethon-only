@@ -5,7 +5,7 @@ import time
 import tkinter.messagebox as tkmb
 from typing import Union
 
-from telethon import TelegramClient
+from telethon import TelegramClient, connection
 
 from src.automation.abstract_automation import AbstractAutomation
 from src.automation.exceptions_automation import (

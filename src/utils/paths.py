@@ -8,24 +8,37 @@ AUTO_REGISTER_FILES = [
     "names.txt",
     "passwords.txt",
     "proxies.txt",
-    "user.txt",
+    "usernames.txt",
+    "user_ids.txt",
     "sessions\\phones.txt",
+    "added_user_ids.txt",
+    "group_to_scrape.txt",
 ]
 
 USER_INFO_DIR = "change_user_info_data"
 USER_INFO_SUBFOLDERS = ["sessions", "profile_pics", "used_sessions"]
 
-USER_INFO_FILES = [
-    "about.txt",
-    "api.txt",
-    "names.txt",
-    "user.txt",
-    "sessions\\phones.txt",
-]
+USER_INFO_FILES = ["about.txt", "api.txt", "names.txt", "user.txt", "sessions\\phones.txt"]
 
-RETRIEVE_MANUAL_DIR = "retrieve_manual_code_data"
-RETRIEVE_MANUAL_SUBFOLDERS = ["sessions"]
-RETRIEVE_MANUAL_FILES = [
-    "api.txt",
-    "sessions\\phones.txt",
-]
+# RETRIEVE_MANUAL_DIR = "retrieve_manual_code_data"
+# RETRIEVE_MANUAL_SUBFOLDERS = ["sessions"]
+# RETRIEVE_MANUAL_FILES = [
+#     "api.txt",
+#     "sessions\\phones.txt",
+# ]
+
+NUMBER_EXTRACT_FROM_SESSIONS_DIR = "number_extractor_from_sessions"
+NUMBER_EXTRACT_FROM_SESSIONS_SUBFOLDERS = ["sessions", "used_sessions"]
+NUMBER_EXTRACT_FROM_SESSIONS_FILES = ["sessions\\phones.txt", "api.txt"]
+
+MULTIPLE_USERNAME_REMOVER_DIR = "multiple_username_remover"
+MULTIPLE_USERNAME_REMOVER_FILES = ["usernames.txt"]
+
+
+MULTIPLE_USERNAME_REMOVER_DIR = "multiple_username_remover"
+MULTIPLE_USERNAME_REMOVER_FILES = ["usernames.txt"]
+
+
+GENERATE_DISCORD_ACCOUNT_DIR = "generate_discord_account"
+GENERATE_DISCORD_ACCOUNT_SUBFOLDERS = ["profile_pics"]
+GENERATE_DISCORD_ACCOUNT_FILES = ["proxies.txt", "account_info.txt", "user.txt", "passwords.txt", ""]

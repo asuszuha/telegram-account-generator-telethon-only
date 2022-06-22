@@ -140,3 +140,6 @@ test_sessions_for_auth/
 auto_register_and_add_user_data/
 change_user_info_data/
 retrieve_manual_code_data/
+multiple_username_remover/
+number_extractor_from_sessions/
+generate_discord_account/
