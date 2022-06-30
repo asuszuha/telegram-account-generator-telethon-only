@@ -297,7 +297,11 @@ class RegisterTelegram(AbstractAutomation):
                                 self.write_list_to_file(
                                     path=AUTO_REGISTER_PATH_DIR, filename="proxies", new_list=self.proxies
                                 )
-                                current_proxy = self.proxies[0]
+                                if self.proxies:
+                                    current_proxy = self.proxies[0]
+                                    formatted_proxy = self.read_txt_proxy(current_proxy)
+                                else:
+                                    raise Exception("No more proxy left in the proxies.txt")
                         except Exception as e:
                             logger.info(f"Unknown exception {str(e)}.")
                             if self.tw_instance and self.tw_instance.client:

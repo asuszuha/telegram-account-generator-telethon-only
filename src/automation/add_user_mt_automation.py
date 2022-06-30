@@ -117,11 +117,11 @@ class AddUserMt(AbstractAutomation):
 
         return answer
 
-    def disconnect_all_clients(self, clients: List[TelegramClient]):
+    async def disconnect_all_clients(self, clients: List[TelegramClient]):
         for client in clients:
             try:
                 if client.is_connected():
-                    client.disconnect()
+                    await client.disconnect()
             except Exception:
                 pass
 
@@ -226,6 +226,7 @@ class AddUserMt(AbstractAutomation):
                                     path=AUTO_REGISTER_PATH_DIR, filename="proxies", new_list=self.proxies
                                 )
                                 current_proxy = self.proxies[0]
+                                formatted_proxy = self.read_txt_proxy(current_proxy)  # type: ignore
                                 if self.tw_instance and self.tw_instance.client:
                                     if self.tw_instance.client.is_connected():
                                         self.tw_instance.client.disconnect()
@@ -498,15 +499,16 @@ class AddUserMt(AbstractAutomation):
             client_me = await client.get_me()
             phone = client_me.phone
             await client.disconnect()
+            await asyncio.sleep(5)
 
-            session = rf"{AUTO_REGISTER_PATH_DIR}\sessions\+{phone}.session"
-            if not os.path.exists(session):
-                session = rf"{AUTO_REGISTER_PATH_DIR}\sessions\{phone}.session"
-            session_filename = session.split("\\")[-1]
-            if os.path.exists(session):
-                shutil.move(session, rf"{AUTO_REGISTER_PATH_DIR}\used_sessions\{session_filename}")
-            else:
-                raise Exception(f"Session file not found {session}. So it cannot be moved.")
+        session = rf"{AUTO_REGISTER_PATH_DIR}\sessions\+{phone}.session"
+        if not os.path.exists(session):
+            session = rf"{AUTO_REGISTER_PATH_DIR}\sessions\{phone}.session"
+        session_filename = session.split("\\")[-1]
+        if os.path.exists(session):
+            shutil.move(session, rf"{AUTO_REGISTER_PATH_DIR}\used_sessions\{session_filename}")
+        else:
+            raise Exception(f"Session file not found {session}. So it cannot be moved.")
 
     async def add_users_to_groups(self, client: TelegramClient, userlist: List, group_info: List, counter: int):
         peer_flooded = []
@@ -557,7 +559,7 @@ class AddUserMt(AbstractAutomation):
                             await self.move_current_session(client)
                         except Exception:
                             logger.exception("Cannot move to session.")
-                    self.disconnect_all_clients(clients=[client])
+                    await self.disconnect_all_clients(clients=[client])
                     client_reusable = False
                     break
                 await asyncio.sleep(e.seconds)
@@ -582,7 +584,7 @@ class AddUserMt(AbstractAutomation):
                             except Exception:
                                 logger.exception("Cannot move to session.")
                         peer_flooded = []
-                        self.disconnect_all_clients(clients=[client])
+                        await self.disconnect_all_clients(clients=[client])
                         break
                 elif "privacy" in str(e):
                     await asyncio.sleep(self.user_delay)
@@ -597,7 +599,7 @@ class AddUserMt(AbstractAutomation):
                             except Exception:
                                 logger.exception("Cannot move to session.")
                         too_many_request = []
-                        self.disconnect_all_clients(clients=[client])
+                        await self.disconnect_all_clients(clients=[client])
                         client_reusable = False
                         break
                 elif "wait" in str(e):
@@ -612,7 +614,7 @@ class AddUserMt(AbstractAutomation):
                                 await self.move_current_session(client)
                             except Exception:
                                 logger.exception("Cannot move to session.")
-                        self.disconnect_all_clients(clients=[client])
+                        await self.disconnect_all_clients(clients=[client])
                         client_reusable = False
                         break
                 elif "entity for PeerUser" in str(e):
@@ -628,7 +630,7 @@ class AddUserMt(AbstractAutomation):
                             except Exception:
                                 logger.exception("Cannot move to session.")
                         other_exceptions = []
-                        self.disconnect_all_clients(clients=[client])
+                        await self.disconnect_all_clients(clients=[client])
                         logger.info("all accounts other error occurs")
                         client_reusable = False
                         break
@@ -670,7 +672,7 @@ class AddUserMt(AbstractAutomation):
                                     await self.move_current_session(client)
                                 except Exception:
                                     logger.exception("Cannot move to session.")
-                            self.disconnect_all_clients(clients=[client])
+                            await self.disconnect_all_clients(clients=[client])
                             break
                         await asyncio.sleep(e.seconds)
                     except Exception as e:
@@ -756,11 +758,9 @@ class AddUserMt(AbstractAutomation):
                     ).days < 30:
                         user_lastmonth = [user for user in result if isinstance(user.status, UserStatusLastMonth)]
                     user_lastweek = []
-                    if (
-                        (datetime.now().date() - self.start_date_user_filter).days
-                        > 7(datetime.now().date() - self.end_date_user_filter).days
-                        < 7
-                    ):
+                    if (datetime.now().date() - self.start_date_user_filter).days > 7 and (
+                        datetime.now().date() - self.end_date_user_filter
+                    ).days < 7:
                         user_lastweek = [user for user in result if isinstance(user.status, UserStatusLastWeek)]
 
                     user_offline = [user for user in result if isinstance(user.status, UserStatusOffline)]

@@ -45,7 +45,7 @@ class AbstractAutomation(threading.Thread, abc.ABC):
         proxy_dict["port"] = int(splitted_line[1])
         proxy_dict["username"] = splitted_line[2]
         proxy_dict["password"] = splitted_line[3]
-        proxy_dict["proxy_type"] = "http"
+        proxy_dict["proxy_type"] = "socks5"
         proxy_dict["rdns"] = True
 
         return proxy_dict

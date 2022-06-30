@@ -42,7 +42,7 @@ class TelegramAccountCreator(tk.Tk):
             print("Not recognized platform. No icon will be set.")
             raise Exception("Not recognized platform.")
 
-        self.title("Telegram Auto Account v0.9.1 (telethon only)")
+        self.title("Telegram Auto Account v0.9.3 (telethon only)")
         self.tabs_in_main_page = ttk.Notebook(self)
         self.tabs_in_main_page.grid(row=1, column=0, sticky="nsew")
         self.header = Header(parent=self)
