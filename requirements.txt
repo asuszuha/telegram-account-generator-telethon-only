@@ -16,3 +16,4 @@ playwright~=1.22.0
 aiofiles~=0.8.0
 tkcalendar~=1.6.1
 python_dateutil~=2.8.2
+emoji~=1.7.0

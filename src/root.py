@@ -13,6 +13,7 @@ from src.ui.add_users_ui_mt import AddTgUsersMt
 from src.ui.auto_register import AutoRegisterTg
 from src.ui.discord_register_acc import AutoRegisterDiscord
 from src.ui.extract_numbers_from_session_ui import ExtracNumTgSession
+from src.ui.group_chat_extractor_ui import GroupTgExtractor
 from src.ui.header import Header
 from src.ui.info_update_ui import UpdateTgInfo
 from src.ui.multiple_username_remover_ui import MultiUsernameRemoveTg
@@ -42,7 +43,7 @@ class TelegramAccountCreator(tk.Tk):
             print("Not recognized platform. No icon will be set.")
             raise Exception("Not recognized platform.")
 
-        self.title("Telegram Auto Account v0.9.3 (telethon only)")
+        self.title("Telegram Auto Account v0.10.0 (telethon only)")
         self.tabs_in_main_page = ttk.Notebook(self)
         self.tabs_in_main_page.grid(row=1, column=0, sticky="nsew")
         self.header = Header(parent=self)
@@ -53,11 +54,12 @@ class TelegramAccountCreator(tk.Tk):
         self.header.btn_stop.configure(command=self.stop)
 
         auto_register_tg = AutoRegisterTg(self.tabs_in_main_page)
-        add_tg_users = AddTgUsers(self.tabs_in_main_page)
+        # add_tg_users = AddTgUsers(self.tabs_in_main_page)
         update_tg_users = UpdateTgInfo(self.tabs_in_main_page)
         extract_tg_num = ExtracNumTgSession(self.tabs_in_main_page)
         multi_user_tg_remove = MultiUsernameRemoveTg(self.tabs_in_main_page)
         add_tg_mt_users = AddTgUsersMt(self.tabs_in_main_page)
+        chat_extractor_tg = GroupTgExtractor(self.tabs_in_main_page)
 
         # Discord
         # auto_register_dc = AutoRegisterDiscord(self.tabs_in_main_page)
@@ -69,6 +71,7 @@ class TelegramAccountCreator(tk.Tk):
         self.tabs_in_main_page.add(update_tg_users, text="Update Users Info")
         self.tabs_in_main_page.add(extract_tg_num, text="Extract Number From Sessions")
         self.tabs_in_main_page.add(multi_user_tg_remove, text="Multiple Username Remover")
+        self.tabs_in_main_page.add(chat_extractor_tg, text="Chat Extractor")
 
         # Discord
         # self.tabs_in_main_page.add(auto_register_dc, text="Auto Register Discord")
@@ -130,6 +133,22 @@ class TelegramAccountCreator(tk.Tk):
 
         for file_name in paths.MULTIPLE_USERNAME_REMOVER_FILES:
             file_name = paths.MULTIPLE_USERNAME_REMOVER_DIR + "\\" + file_name
+
+            if not os.path.exists(file_name):
+                with open(file_name, "a") as fh:
+                    fh.close()
+
+        # Group chat extractor
+        if not os.path.exists(paths.GROUP_CHAT_EXTRACTOR_DIR):
+            os.mkdir(paths.GROUP_CHAT_EXTRACTOR_DIR)
+
+        for folder_name in paths.GROUP_CHAT_EXTRACTOR_SUBFOLDERS:
+            folder_name = paths.GROUP_CHAT_EXTRACTOR_DIR + "\\" + folder_name
+            if not os.path.exists(folder_name):
+                os.mkdir(folder_name)
+
+        for file_name in paths.GROUP_CHAT_EXTRACTOR_FILES:
+            file_name = paths.GROUP_CHAT_EXTRACTOR_DIR + "\\" + file_name
 
             if not os.path.exists(file_name):
                 with open(file_name, "a") as fh:

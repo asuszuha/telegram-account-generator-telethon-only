@@ -29,7 +29,7 @@ class AbstractAutomation(threading.Thread, abc.ABC):
                 return [line.replace("\n", "") for line in fh.readlines()]
         else:
             logger.exception(f"Please put {filename} file under data folder.")
-            raise Exception("No names file detected!")
+            raise Exception("No file detected!")
 
     def write_list_to_file(self, path: str, filename: str, new_list: List[str]):
         new_list = [elem + "\n" for elem in new_list]  # type: ignore
