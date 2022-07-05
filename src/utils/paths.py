@@ -46,4 +46,4 @@ GENERATE_DISCORD_ACCOUNT_FILES = ["proxies.txt", "account_info.txt", "user.txt",
 
 GROUP_CHAT_EXTRACTOR_DIR = "group_chat_extractor"
 GROUP_CHAT_EXTRACTOR_SUBFOLDERS = ["sessions", "used_sessions"]
-GROUP_CHAT_EXTRACTOR_FILES = ["group.txt", "extracted_messages.txt", "api.txt"]
+GROUP_CHAT_EXTRACTOR_FILES = ["group.txt", "extracted_messages.txt", "api.txt", "bad_words.txt", "sessions\\phones.txt"]

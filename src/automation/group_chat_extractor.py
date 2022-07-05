@@ -75,6 +75,7 @@ class GroupChatScraper(AbstractAutomation):
         self.message_scrape_option = message_scrape_option
         self.group = self.read_file_with_property(path=GROUP_CHAT_EXTRACTOR_DIR, filename="group")
         self.apis = self.read_file_with_property(path=GROUP_CHAT_EXTRACTOR_DIR, filename="api")
+        self.bad_words = self.read_file_with_property(path=GROUP_CHAT_EXTRACTOR_DIR, filename="bad_words")
         # self.added_user_ids = self.read_file_with_property(path=GROUP_CHAT_EXTRACTOR_DIR, filename="added_user_ids")
         # self.group_to_scrape = self.read_file_with_property(path=GROUP_CHAT_EXTRACTOR_DIR, filename="group_to_scrape")
 
@@ -650,6 +651,17 @@ class GroupChatScraper(AbstractAutomation):
 
         return messages
 
+    def remove_bad_words(self, messages):
+        new_msgs = []
+        for msg in messages:
+            for bad_word in self.bad_words:
+                if bad_word in msg:
+                    msg = msg.replace(bad_word, "")
+
+            new_msgs.append(msg)
+
+        return new_msgs
+
     def add_replies_to_messages_and_extract_text(self, messages, total_len_messages: int):
         only_txt_messages = []
         messages = [msg for msg in messages if msg.raw_text]
@@ -663,7 +675,7 @@ class GroupChatScraper(AbstractAutomation):
                     only_txt_messages.append(emoji.demojize(msg.raw_text.replace("\n", "")))
             else:
                 only_txt_messages.append(emoji.demojize(msg.raw_text.replace("\n", "")))
-
+        only_txt_messages = self.remove_bad_words(only_txt_messages)
         return only_txt_messages, len(only_txt_messages) + total_len_messages
 
     def remove_spaces_from_file(self):
