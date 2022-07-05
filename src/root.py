@@ -17,6 +17,7 @@ from src.ui.group_chat_extractor_ui import GroupTgExtractor
 from src.ui.header import Header
 from src.ui.info_update_ui import UpdateTgInfo
 from src.ui.multiple_username_remover_ui import MultiUsernameRemoveTg
+from src.ui.name_extractor_ui import TgNameExtractor
 from src.utils import paths
 from src.utils.logger import ConsoleUi, logger
 
@@ -60,6 +61,7 @@ class TelegramAccountCreator(tk.Tk):
         multi_user_tg_remove = MultiUsernameRemoveTg(self.tabs_in_main_page)
         add_tg_mt_users = AddTgUsersMt(self.tabs_in_main_page)
         chat_extractor_tg = GroupTgExtractor(self.tabs_in_main_page)
+        name_extractor_tg = TgNameExtractor(self.tabs_in_main_page)
 
         # Discord
         # auto_register_dc = AutoRegisterDiscord(self.tabs_in_main_page)
@@ -72,6 +74,7 @@ class TelegramAccountCreator(tk.Tk):
         self.tabs_in_main_page.add(extract_tg_num, text="Extract Number From Sessions")
         self.tabs_in_main_page.add(multi_user_tg_remove, text="Multiple Username Remover")
         self.tabs_in_main_page.add(chat_extractor_tg, text="Chat Extractor")
+        self.tabs_in_main_page.add(name_extractor_tg, text="Name Extractor")
 
         # Discord
         # self.tabs_in_main_page.add(auto_register_dc, text="Auto Register Discord")
@@ -149,6 +152,22 @@ class TelegramAccountCreator(tk.Tk):
 
         for file_name in paths.GROUP_CHAT_EXTRACTOR_FILES:
             file_name = paths.GROUP_CHAT_EXTRACTOR_DIR + "\\" + file_name
+
+            if not os.path.exists(file_name):
+                with open(file_name, "a") as fh:
+                    fh.close()
+
+        # Name extractor
+        if not os.path.exists(paths.NAME_EXTRACTOR_DIR):
+            os.mkdir(paths.NAME_EXTRACTOR_DIR)
+
+        for folder_name in paths.NAME_EXTRACTOR_SUBFOLDERS:
+            folder_name = paths.NAME_EXTRACTOR_DIR + "\\" + folder_name
+            if not os.path.exists(folder_name):
+                os.mkdir(folder_name)
+
+        for file_name in paths.NAME_EXTRACTOR_FILES:
+            file_name = paths.NAME_EXTRACTOR_DIR + "\\" + file_name
 
             if not os.path.exists(file_name):
                 with open(file_name, "a") as fh:
