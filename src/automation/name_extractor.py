@@ -61,12 +61,14 @@ class NameScraperFromGroup(AbstractAutomation):
         max_names: str,
         code_required: int,
         name_scraping_option: int,
+        extraction_opts: int,
         **kwargs,
     ):
         super().__init__(**kwargs)
 
         self.client_mode = client_mode
         self.name_scraping_option = name_scraping_option
+        self.extraction_opts = extraction_opts
         self.group = self.read_file_with_property(path=NAME_EXTRACTOR_DIR, filename="group")
         self.apis = self.read_file_with_property(path=NAME_EXTRACTOR_DIR, filename="api")
         self.max_names = int(max_names)
@@ -394,11 +396,29 @@ class NameScraperFromGroup(AbstractAutomation):
             n_names = ["{}\n".format(msg) for msg in names]
             f.writelines(n_names)
 
-    def extract_name_and_photo(self, client: TelegramClient, scraped_users):
+    async def extract_profile_photo(self, client: TelegramClient, scraped_users):
+        for user in scraped_users:
+            while GV.ProgramStatus == GV.PROGRAM_STATUS["IDLE"]:
+                time.sleep(1 / 30)
+                continue
+
+            if GV.ProgramStatus == GV.PROGRAM_STATUS["STOP"]:
+                self.running = False
+                break
+            if user.photo:
+                if user.photo.has_video:
+                    extension = "gif"
+                else:
+                    extension = "jpg"
+
+                await client.download_profile_photo(
+                    user.id, file=rf"{NAME_EXTRACTOR_DIR}\profile_pictures\{str(uuid.uuid4())}.{extension}"
+                )
+
+    async def extract_name(self, scraped_users):
         all_names = []
         counter = 0
         for user in scraped_users:
-            last_name = None
             if user.first_name:
                 first_name = user.first_name
             else:
@@ -408,16 +428,6 @@ class NameScraperFromGroup(AbstractAutomation):
                 full_name = first_name + " " + user.last_name
             else:
                 full_name = first_name
-
-            if user.photo:
-                if user.photo.has_video:
-                    extension = "gif"
-                else:
-                    extension = "jpg"
-
-                client.download_profile_photo(
-                    user.id, file=rf"{NAME_EXTRACTOR_DIR}\profile_pictures\{str(uuid.uuid4())}.{extension}"
-                )
 
             all_names.append(emoji.demojize(full_name))
             while GV.ProgramStatus == GV.PROGRAM_STATUS["IDLE"]:
@@ -467,9 +477,18 @@ class NameScraperFromGroup(AbstractAutomation):
                 scraped_users = self.scrape_users_from_groups(
                     client=client, group=group, limit_of_return=self.max_names
                 )
-            self.extract_name_and_photo(client, scraped_users)
+
+            if self.extraction_opts == 0:
+                loop.run_until_complete(self.extract_profile_photo(client, scraped_users))
+            elif self.extraction_opts == 1:
+                loop.run_until_complete(self.extract_name(scraped_users))
+            else:
+                loop.run_until_complete(
+                    asyncio.gather(self.extract_profile_photo(client, scraped_users), self.extract_name(scraped_users))
+                )
+
             client.disconnect()
-            self.logger("Extraction completed.")
+            logger.info("Extraction completed.")
         except Exception as e:
             logger.exception(f"Unexpected exception occured: {str(e)}")
 

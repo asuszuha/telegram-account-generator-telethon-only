@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import shutil
 import time
 import tkinter.messagebox as tkmb
@@ -655,8 +656,8 @@ class GroupChatScraper(AbstractAutomation):
         new_msgs = []
         for msg in messages:
             for bad_word in self.bad_words:
-                if bad_word in msg:
-                    msg = msg.replace(bad_word, "")
+                insensitive_badword = re.compile(re.escape(bad_word), re.IGNORECASE)
+                msg = insensitive_badword.sub("", msg).strip()
 
             new_msgs.append(msg)
 

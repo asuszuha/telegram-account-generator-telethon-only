@@ -79,11 +79,36 @@ class TgNameExtractor(AbstractTab):
 
         self._ent_number_of_names.bind("<KeyRelease>", self._check_name_amount)
         self._ent_number_of_names["state"] = "disabled"
-        lbl_frame_extract_names.grid(row=0, column=2, stick="we", padx=(5, 5))
+        lbl_frame_extract_names.grid(row=0, column=1, stick="we", padx=(5, 5))
         rd_btn_all_names.grid(row=0, column=0, sticky="w", padx=(10, 5))
         rd_btn_number_of_names.grid(row=1, column=0, sticky="w", padx=(10, 5))
         lbl_number_of_names.grid(row=2, column=0, sticky="we", padx=(5, 5))
         self._ent_number_of_names.grid(row=3, column=0, sticky="we", padx=(10, 5))
+
+        self.var_extract_ops = IntVar(value=0)
+        lbl_frame_extract_opts = ttk.LabelFrame(self, text="Extraction Options:")
+        rd_btn_only_pics = ttk.Radiobutton(
+            lbl_frame_extract_opts,
+            text="0: Only pictures",
+            value=0,
+            variable=self.var_extract_ops,
+        )
+        rd_btn_only_names = ttk.Radiobutton(
+            lbl_frame_extract_opts,
+            text="1: Only names",
+            value=1,
+            variable=self.var_extract_ops,
+        )
+        rd_btn_both_names_and_pics = ttk.Radiobutton(
+            lbl_frame_extract_opts,
+            text="2: Both names and pictures",
+            value=2,
+            variable=self.var_extract_ops,
+        )
+        lbl_frame_extract_opts.grid(row=1, column=1, sticky="nswe", padx=(5, 5))
+        rd_btn_only_pics.grid(row=0, column=0, sticky="w", padx=(10, 5))
+        rd_btn_only_names.grid(row=1, column=0, sticky="w", padx=(10, 5))
+        rd_btn_both_names_and_pics.grid(row=2, column=0, sticky="w", padx=(10, 5))
 
     def isfloat(self, num):
         try:
@@ -126,6 +151,7 @@ class TgNameExtractor(AbstractTab):
                 code_required=self.var_code_required.get(),
                 max_names=self._ent_number_of_names.get(),
                 name_scraping_option=self.var_extract_names.get(),
+                extraction_opts=self.var_extract_ops.get(),
             )
             self.frame_thread = self.frame_thread
             self.frame_thread.start()
