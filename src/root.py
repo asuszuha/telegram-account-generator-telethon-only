@@ -8,10 +8,9 @@ from tkinter import ttk
 
 import src.GV as GV
 from src.ui.abstract_frame_ui import AbstractTab
-from src.ui.add_users_ui import AddTgUsers
+from src.ui.account_checker_ui import TgAccountChecker
 from src.ui.add_users_ui_mt import AddTgUsersMt
 from src.ui.auto_register import AutoRegisterTg
-from src.ui.discord_register_acc import AutoRegisterDiscord
 from src.ui.extract_numbers_from_session_ui import ExtracNumTgSession
 from src.ui.group_chat_extractor_ui import GroupTgExtractor
 from src.ui.header import Header
@@ -55,13 +54,13 @@ class TelegramAccountCreator(tk.Tk):
         self.header.btn_stop.configure(command=self.stop)
 
         auto_register_tg = AutoRegisterTg(self.tabs_in_main_page)
-        # add_tg_users = AddTgUsers(self.tabs_in_main_page)
         update_tg_users = UpdateTgInfo(self.tabs_in_main_page)
         extract_tg_num = ExtracNumTgSession(self.tabs_in_main_page)
         multi_user_tg_remove = MultiUsernameRemoveTg(self.tabs_in_main_page)
         add_tg_mt_users = AddTgUsersMt(self.tabs_in_main_page)
         chat_extractor_tg = GroupTgExtractor(self.tabs_in_main_page)
         name_extractor_tg = TgNameExtractor(self.tabs_in_main_page)
+        account_checker_tg = TgAccountChecker(self.tabs_in_main_page)
 
         # Discord
         # auto_register_dc = AutoRegisterDiscord(self.tabs_in_main_page)
@@ -75,6 +74,7 @@ class TelegramAccountCreator(tk.Tk):
         self.tabs_in_main_page.add(multi_user_tg_remove, text="Multiple Username Remover")
         self.tabs_in_main_page.add(chat_extractor_tg, text="Chat Extractor")
         self.tabs_in_main_page.add(name_extractor_tg, text="Name Extractor")
+        self.tabs_in_main_page.add(account_checker_tg, text="Account Checker")
 
         # Discord
         # self.tabs_in_main_page.add(auto_register_dc, text="Auto Register Discord")
@@ -168,6 +168,22 @@ class TelegramAccountCreator(tk.Tk):
 
         for file_name in paths.NAME_EXTRACTOR_FILES:
             file_name = paths.NAME_EXTRACTOR_DIR + "\\" + file_name
+
+            if not os.path.exists(file_name):
+                with open(file_name, "a") as fh:
+                    fh.close()
+
+        # Account checker
+        if not os.path.exists(paths.ACCOUNT_CHECKER_DIR):
+            os.mkdir(paths.ACCOUNT_CHECKER_DIR)
+
+        for folder_name in paths.ACCOUNT_CHECKER_SUBFOLDERS:
+            folder_name = paths.ACCOUNT_CHECKER_DIR + "\\" + folder_name
+            if not os.path.exists(folder_name):
+                os.mkdir(folder_name)
+
+        for file_name in paths.ACCOUNT_CHECKER_FILES:
+            file_name = paths.ACCOUNT_CHECKER_DIR + "\\" + file_name
 
             if not os.path.exists(file_name):
                 with open(file_name, "a") as fh:

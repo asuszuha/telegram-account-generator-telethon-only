@@ -52,3 +52,8 @@ GROUP_CHAT_EXTRACTOR_FILES = ["group.txt", "extracted_messages.txt", "api.txt", 
 NAME_EXTRACTOR_DIR = "name_extractor"
 NAME_EXTRACTOR_SUBFOLDERS = ["sessions", "used_sessions", "profile_pictures"]
 NAME_EXTRACTOR_FILES = ["group.txt", "extracted_user_names.txt", "api.txt", "sessions\\phones.txt"]
+
+
+ACCOUNT_CHECKER_DIR = "account_checker"
+ACCOUNT_CHECKER_SUBFOLDERS = ["sessions", "banned_sessions", "good_sessions", "limited_sessions"]
+ACCOUNT_CHECKER_FILES = ["spam_check_link.txt", "api.txt", "sessions\\phones.txt"]
