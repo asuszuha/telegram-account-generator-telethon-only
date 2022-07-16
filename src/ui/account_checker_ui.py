@@ -3,7 +3,7 @@ import os
 import tkinter.messagebox as tkmb
 from tkinter import IntVar, ttk
 
-# from src.automation.group_chat_extractor import GroupChatScraper
+from src.automation.account_checker import AccountChecker
 from src.utils.paths import ACCOUNT_CHECKER_DIR
 
 from .abstract_frame_ui import AbstractTab
@@ -66,19 +66,13 @@ class TgAccountChecker(AbstractTab):
                 tkmb.showerror("No sessions found", "No session file found under sessions folder.")
                 return
 
-        # if not self.frame_thread or not self.frame_thread.is_alive():
-        #     self.frame_thread = GroupChatScraper(
-        #         client_mode=self.var_client_from.get(),
-        #         code_required=self.var_code_required.get(),
-        #         # proxy_enabled=self.var_proxy_enabled.get(),
-        #         # threading_option=self.var_multi_thread.get(),
-        #         # user_scrape_option=self.var_recent_users.get(),
-        #         message_scrape_option=self.var_scrape_msg_option.get(),
-        #         start_date_user_filter=self.cal_start.get_date(),
-        #         end_date_user_filter=self.cal_end.get_date(),
-        #     )
-        #     self.frame_thread = self.frame_thread
-        #     self.frame_thread.start()
+        if not self.frame_thread or not self.frame_thread.is_alive():
+            self.frame_thread = AccountChecker(
+                client_mode=self.var_client_from.get(),
+                code_required=self.var_code_required.get(),
+            )
+            self.frame_thread = self.frame_thread
+            self.frame_thread.start()
 
-        # else:
-        #     self.frame_thread.resume()
+        else:
+            self.frame_thread.resume()
