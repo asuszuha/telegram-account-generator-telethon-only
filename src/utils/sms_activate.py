@@ -1,3 +1,5 @@
+from typing import Optional
+
 from smsactivate.api import SMSActivateAPI
 
 
@@ -21,9 +23,10 @@ global list_of_countries
 
 
 class SmsActivate:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, service: Optional[str] = "tg"):
         self._sms_api = SMSActivateAPI(api_key)
         self._countries = self.get_all_countries()
+        self._service = service
 
     def get_all_countries(self):
         self._all_info_countries = self._sms_api.getCountries()
@@ -37,7 +40,7 @@ class SmsActivate:
 
     def get_number(self, country: str):
         country_id = self._countries.index(country)
-        number = self._sms_api.getNumber(service="tg", country=country_id, verification="false")
+        number = self._sms_api.getNumber(service=self._service, country=country_id, verification="false")
         if "error" in number.keys():
             raise NoNumbersException(number["message"])
 

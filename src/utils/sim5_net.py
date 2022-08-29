@@ -37,14 +37,14 @@ class PurchaseModel(BaseModel):
 
 
 class Sim5Net:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, product: Optional[str] = "telegram"):
         self.api_key = api_key
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-type": "application/json",
         }
         self._operator = "any"
-        self._product = "telegram"
+        self._product = product
         self._list_of_countries = None
 
     def get_countries(self):

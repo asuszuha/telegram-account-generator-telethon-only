@@ -1,0 +1,3 @@
+v0.11.1
+- Name extractor -> Extraction options added like only name only profile Pic
+- Group message extractor -> Bad word removing now not case sensitive
