@@ -5,7 +5,7 @@ import time
 import tkinter.messagebox as tkmb
 from typing import Union
 
-from telethon import TelegramClient, connection
+from telethon import TelegramClient
 
 from src.automation.abstract_automation import AbstractAutomation
 from src.automation.exceptions_automation import (
@@ -40,6 +40,7 @@ class RegisterTelegram(AbstractAutomation):
         # Init from files
         self.names = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="names")
         self.devices = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="devices")
+        self.proxy_enabled = proxy_enabled
         if proxy_enabled:
             self.proxies = self.read_file_with_property(path=AUTO_REGISTER_PATH_DIR, filename="proxies")
         else:
@@ -205,10 +206,13 @@ class RegisterTelegram(AbstractAutomation):
 
                     formatted_proxy = None
                     current_proxy = None
-                    if self.proxies:
-                        current_proxy = self.proxies[0]
-                        formatted_proxy = self.read_txt_proxy(current_proxy)  # type: ignore
-                        logger.info(f"Proxy will be used: {formatted_proxy['addr']}")
+                    if self.proxy_enabled:
+                        if self.proxies:
+                            current_proxy = self.proxies[0]
+                            formatted_proxy = self.read_txt_proxy(current_proxy)  # type: ignore
+                            logger.info(f"Proxy will be used: {formatted_proxy['addr']}")
+                        else:
+                            raise Exception("No more proxy left in the proxies.txt")
 
                     device = None
                     if self.devices:

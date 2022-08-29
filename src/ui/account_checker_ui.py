@@ -54,6 +54,10 @@ class TgAccountChecker(AbstractTab):
         rd_btn_code_required_no.grid(row=0, column=0, sticky="w", padx=(10, 5))
         rd_btn_code_required_yes.grid(row=1, column=0, sticky="w", padx=(10, 5))
 
+        self.var_proxy_enabled = IntVar(value=0)
+        _chb_proxy_enabled = ttk.Checkbutton(self, text="Enable proxy", variable=self.var_proxy_enabled)
+        _chb_proxy_enabled.grid(row=2, column=0, sticky="w", padx=(5, 5))
+
     def run(self):
         if self.var_client_from.get() == 0:
             phones_exists = os.path.exists(rf"{ACCOUNT_CHECKER_DIR}\sessions\phones.txt")
@@ -70,6 +74,7 @@ class TgAccountChecker(AbstractTab):
             self.frame_thread = AccountChecker(
                 client_mode=self.var_client_from.get(),
                 code_required=self.var_code_required.get(),
+                proxy_enabled=self.var_proxy_enabled.get(),
             )
             self.frame_thread = self.frame_thread
             self.frame_thread.start()

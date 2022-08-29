@@ -55,5 +55,5 @@ NAME_EXTRACTOR_FILES = ["group.txt", "extracted_user_names.txt", "api.txt", "ses
 
 
 ACCOUNT_CHECKER_DIR = "account_checker"
-ACCOUNT_CHECKER_SUBFOLDERS = ["sessions", "good_sessions", "limited_sessions"]
-ACCOUNT_CHECKER_FILES = ["spam_check_link.txt", "api.txt", "sessions\\phones.txt"]
+ACCOUNT_CHECKER_SUBFOLDERS = ["sessions", "good_sessions", "limited_sessions", "banned_sessions"]
+ACCOUNT_CHECKER_FILES = ["spam_check_link.txt", "api.txt", "sessions\\phones.txt", "proxies.txt", "test_messages.txt"]
